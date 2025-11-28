@@ -1,0 +1,232 @@
+---
+title: "EDA Schools"
+author: "Judith Beltrán"
+date: "2025-11-17"
+output: html_document
+---
+
+```{r}
+library(readxl)
+library(dplyr)
+
+schools_df <- read_excel("data/Data_on_Individual_Schools_Mainstream_2024_25.xlsx", sheet=2)
+schools_df <- schools_df%>%rename("Roll_Number" = "Roll Number")%>%rename("longitude" = "School Longitude")%>%rename("latitude" = "School Latitude")
+
+
+schools_df <- schools_df %>%
+  rename(
+    AcademicYear = `Academic Year (Enrolment)`,
+    SchoolName   = `Official Name`
+  )
+```
+
+```{r}
+library(sf)
+library(rnaturalearth)
+library(ggplot2)
+
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+ireland <- world[world$admin == "Ireland", ]
+```
+```{r}
+
+schools_df_clean <- schools_df[complete.cases(schools_df[, c("longitude", "latitude")]), ] # clean null
+
+schools_sf <- st_as_sf(
+  schools_df_clean,
+  coords = c("longitude", "latitude"),
+  crs = 4326
+)
+
+# Plot
+ggplot() +
+  geom_sf(data = ireland) +
+  geom_sf(data = schools_sf) +
+  labs(
+    title = "Schools in Ireland",
+    subtitle = "Points located using coordinates"
+  )
+
+```
+
+```{r}
+ggplot(schools_df, aes(x = `School Type`)) +
+  geom_bar() +
+  coord_flip() +
+  labs(
+    title = "Number of schools by School Type",
+    x = "School Type",
+    y = "Number of schools"
+  )
+
+```
+
+```{r}
+ggplot(schools_df, aes(x = Female, y = Male)) +
+  geom_point(alpha = 0.5) +
+  labs(
+    title = "Female vs Male enrolment per school",
+    x = "Female enrolment",
+    y = "Male enrolment"
+  )
+
+```
+
+
+
+```{r}
+
+schools_sf <- st_as_sf(
+  schools_df_clean,
+  coords = c("longitude", "latitude"),
+  crs = 4326,
+  remove = FALSE
+)
+
+ggplot() +
+  geom_sf(data = ireland) +
+  geom_sf(data = schools_sf, aes(colour = `School Level`), size = 0.7, alpha = 0.8) +
+  labs(title = "Schools in Ireland by Level")
+
+```
+```{r}
+schools_df_clean <- schools_df %>% 
+  filter(!is.na(latitude), !is.na(longitude))
+
+ggplot(schools_df_clean, aes(x = longitude, y = latitude)) +
+  geom_point(aes(colour = `County Description`), alpha = 0.7, size = 1) +
+  coord_equal() +
+  theme_minimal() +
+  labs(colour = "County")
+
+ggplot(schools_df_clean, aes(x = longitude, y = latitude)) +
+  geom_point(size = 0.7, alpha = 0.7) +
+  facet_wrap(~ `County Description`) +
+  coord_equal() +
+  theme_minimal()
+
+```
+
+```{r}
+library(sf)
+library(dplyr)
+library(ggplot2)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+ireland_counties <- ne_states(
+  country     = "Ireland",
+  returnclass = "sf"
+)
+```
+
+
+
+```{r}
+
+schools_sf <- st_as_sf(
+  schools_df_clean,
+  coords = c("longitude", "latitude"),
+  crs = 4326,
+  remove = FALSE
+)
+
+ggplot() +
+  geom_sf(
+    data  = ireland_counties,
+    aes(fill = name),  
+    color = "white",
+    linewidth = 0.3,
+    alpha = 0.6
+  ) +
+  geom_sf(
+    data = schools_sf,
+    aes(colour = `School Level`),
+    size = 0.7,
+    alpha = 0.8
+  ) +
+  coord_sf() +
+  labs(
+    title = "Schools in Ireland by Level and County",
+    fill = "County",
+    colour = "School Level"
+  ) +
+  theme_minimal()
+
+```
+
+```{r}
+library(sf)
+library(dplyr)
+#library(gstat)
+#library(stars)
+library(ggplot2)
+
+
+schools_sf <- st_as_sf(
+  schools_df_clean,
+  coords = c("longitude", "latitude"),
+  crs = 4326,
+  remove = FALSE
+)
+
+schools_sf <- st_transform(schools_sf, 2157)
+ireland_proj <- st_transform(ireland, 2157)
+
+
+schools_sf$enrolment <- as.numeric(schools_sf$`Enrolment per Return`)
+
+schools_krig <- schools_sf %>% filter(!is.na(enrolment))
+
+
+grid <- st_make_grid(
+  ireland_proj,
+  cellsize = 5000,         
+  what = "centers"
+)
+
+grid <- st_sf(grid_id = 1:length(grid), geometry = grid)
+
+grid <- grid[ireland_proj, ]
+
+vgm_emp <- variogram(enrolment ~ 1, data = schools_krig)
+
+vgm_model <- fit.variogram(vgm_emp, vgm("Sph"))
+
+
+krig_result <- krige(
+  enrolment ~ 1,
+  locations = schools_krig,
+  newdata = grid,
+  model = vgm_model
+)
+
+krig_stars <- st_rasterize(krig_result["var1.pred"])
+
+
+ggplot() +
+  geom_stars(data = krig_stars) +
+  scale_fill_viridis_c(name = "Predicted\nEnrolment") +
+  geom_sf(data = ireland_proj, fill = NA, color = "black") +
+  geom_sf(data = schools_krig, color = "red", size = 0.7) +
+  labs(title = "Kriged Enrolment Surface Across Ireland") +
+  theme_minimal()
+
+```
+
+
+
+
+```{r}
+```
+
+
+
+
+```{r}
+```
+
+
+```{r}
+```
