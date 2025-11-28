@@ -1,0 +1,110 @@
+---
+title: "eda_census"
+output: html_document
+---
+
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(DataExplorer)
+
+df <- read_csv("../data/SAP2022T11T1TOWN22.20251128T151123.csv") %>%
+  clean_names()
+
+head(df)
+glimpse(df)
+```
+
+
+
+```{r}
+summary(df)
+
+```
+
+
+
+
+```{r}
+df %>% summarise(
+  n_towns = n_distinct(towns_2022),
+  n_means = n_distinct(means_of_travel),
+  n_years = n_distinct(census_year)
+)
+```
+
+
+
+
+
+```{r}
+df %>%
+  group_by(towns_2022, means_of_travel) %>%
+  summarise(total = sum(value), .groups = "drop") %>%
+  arrange(desc(total)) %>%
+  head(20)
+```
+
+
+
+
+```{r}
+df %>%
+  group_by(means_of_travel) %>%
+  summarise(total = sum(value)) %>%
+  ggplot(aes(x = reorder(means_of_travel, total), y = total)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Total Usually Resident Population by Travel Mode",
+       x = "Means of Travel", y = "Total")
+```
+
+
+
+```{r}
+df %>%
+  filter(means_of_travel == "On Foot") %>%
+  slice_max(order_by = value, n = 10) %>%
+  ggplot(aes(x = reorder(towns_2022, value), y = value)) +
+  geom_col(fill = "darkgreen") +
+  coord_flip() +
+  labs(title = "Top 10 Towns – Walking to Work", x = "Town", y = "People")
+
+```
+
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```

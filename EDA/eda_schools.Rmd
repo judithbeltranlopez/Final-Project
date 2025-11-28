@@ -9,7 +9,7 @@ output: html_document
 library(readxl)
 library(dplyr)
 
-schools_df <- read_excel("data/Data_on_Individual_Schools_Mainstream_2024_25.xlsx", sheet=2)
+schools_df <- read_excel("../data/Data_on_Individual_Schools_Mainstream_2024_25.xlsx", sheet=2)
 schools_df <- schools_df%>%rename("Roll_Number" = "Roll Number")%>%rename("longitude" = "School Longitude")%>%rename("latitude" = "School Latitude")
 
 
@@ -108,93 +108,55 @@ ggplot(schools_df_clean, aes(x = longitude, y = latitude)) +
 
 ```
 
+
 ```{r}
 library(sf)
 library(dplyr)
+library(gstat)
+library(stars)
 library(ggplot2)
-library(rnaturalearth)
-library(rnaturalearthdata)
 
-ireland_counties <- ne_states(
-  country     = "Ireland",
-  returnclass = "sf"
-)
-```
+# 1. Filter schools for Galway only
+schools_galway <- schools_df_clean %>%
+  filter(`County Description` == "Galway")
 
-
-
-```{r}
-
+# 2. Convert to sf
 schools_sf <- st_as_sf(
-  schools_df_clean,
+  schools_galway,
   coords = c("longitude", "latitude"),
   crs = 4326,
   remove = FALSE
 )
 
-ggplot() +
-  geom_sf(
-    data  = ireland_counties,
-    aes(fill = name),  
-    color = "white",
-    linewidth = 0.3,
-    alpha = 0.6
-  ) +
-  geom_sf(
-    data = schools_sf,
-    aes(colour = `School Level`),
-    size = 0.7,
-    alpha = 0.8
-  ) +
-  coord_sf() +
-  labs(
-    title = "Schools in Ireland by Level and County",
-    fill = "County",
-    colour = "School Level"
-  ) +
-  theme_minimal()
-
-```
-
-```{r}
-library(sf)
-library(dplyr)
-#library(gstat)
-#library(stars)
-library(ggplot2)
-
-
-schools_sf <- st_as_sf(
-  schools_df_clean,
-  coords = c("longitude", "latitude"),
-  crs = 4326,
-  remove = FALSE
-)
-
+# 3. Project
 schools_sf <- st_transform(schools_sf, 2157)
-ireland_proj <- st_transform(ireland, 2157)
 
+# 4. Extract Galway county polygon
+galway_poly <- ireland %>% 
+  filter(COUNTYNAME == "Galway") %>% 
+  st_transform(2157)
 
+# 5. Prepare enrolment
 schools_sf$enrolment <- as.numeric(schools_sf$`Enrolment per Return`)
 
+# Remove missing enrolments
 schools_krig <- schools_sf %>% filter(!is.na(enrolment))
 
-
+# 6. Build grid ONLY inside Galway
 grid <- st_make_grid(
-  ireland_proj,
-  cellsize = 5000,         
+  galway_poly,
+  cellsize = 5000,
   what = "centers"
 )
 
-grid <- st_sf(grid_id = 1:length(grid), geometry = grid)
+grid <- st_sf(id = 1:length(grid), geometry = grid)
+grid <- grid[galway_poly, ]
 
-grid <- grid[ireland_proj, ]
-
+# 7. Build variogram and fit model
 vgm_emp <- variogram(enrolment ~ 1, data = schools_krig)
-
 vgm_model <- fit.variogram(vgm_emp, vgm("Sph"))
 
-
+# 8. Kriging only for Galway
 krig_result <- krige(
   enrolment ~ 1,
   locations = schools_krig,
@@ -202,16 +164,18 @@ krig_result <- krige(
   model = vgm_model
 )
 
+# 9. Convert kriging output to raster
 krig_stars <- st_rasterize(krig_result["var1.pred"])
 
-
+# 10. Plot map ONLY for Galway
 ggplot() +
   geom_stars(data = krig_stars) +
   scale_fill_viridis_c(name = "Predicted\nEnrolment") +
-  geom_sf(data = ireland_proj, fill = NA, color = "black") +
+  geom_sf(data = galway_poly, fill = NA, color = "black", linewidth = 1) +
   geom_sf(data = schools_krig, color = "red", size = 0.7) +
-  labs(title = "Kriged Enrolment Surface Across Ireland") +
+  labs(title = "Kriged Enrolment Surface — Galway Only") +
   theme_minimal()
+
 
 ```
 
