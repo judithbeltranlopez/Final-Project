@@ -65,24 +65,24 @@ df_clean %>%
 ```{r}
 df_clean %>%
   group_by(means_of_travel) %>%
-  summarise(total = sum(value)) %>%
-  ggplot(aes(x = reorder(means_of_travel, total), y = total)) +
+  summarise(total = sum(value), .groups = "drop") %>%
+  mutate(percentage = total / sum(total) * 100) %>%
+  ggplot(aes(x = reorder(means_of_travel, percentage), y = percentage)) +
   geom_col(fill = "steelblue") +
   coord_flip() +
-  labs(title = "Total Usually Resident Population by Travel Mode",
-       x = "Means of Travel", y = "Total")
+  labs(
+    title = "Percentage of Usually Resident Population by Travel Mode",
+    x = "Means of Travel",
+    y = "Percentage (%)"
+  )
+
 ```
 
 
 
 ```{r}
-df_clean %>%
-  filter(means_of_travel == "On Foot") %>%
-  slice_max(order_by = value, n = 10) %>%
-  ggplot(aes(x = reorder(towns_2022, value), y = value)) +
-  geom_col(fill = "darkgreen") +
-  coord_flip() +
-  labs(title = "Top 10 Towns – Walking to Work", x = "Town", y = "People")
+
+#TODO: redo graph
 
 ```
 
@@ -95,14 +95,21 @@ unique(df_clean$means_of_travel)
 
 
 ```{r}
+
 df_clean %>%
   group_by(health_group) %>%
-  summarise(total = sum(value)) %>%
-  ggplot(aes(x = reorder(health_group, total), y = total)) +
+  summarise(total = sum(value), .groups = "drop") %>%
+  mutate(percentage = total / sum(total) * 100) %>%
+  ggplot(aes(x = reorder(health_group, percentage), y = percentage)) +
   geom_col(fill = "steelblue") +
   coord_flip() +
-  labs(title = "Total Usually Resident Population by Travel Mode",
-       x = "Health group", y = "Total")
+  labs(
+    title = "Percentage of Usually Resident Population by Health Group",
+    x = "Health Group",
+    y = "Percentage (%)"
+  )
+
+
 ```
 
 
