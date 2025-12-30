@@ -7,19 +7,32 @@ output: html_document
 ```{r}
 library(tidyverse)
 library(janitor)
-library(DataExplorer)
+#library(DataExplorer)
 
 df <- read_csv("../data/SAP2022T11T1TOWN22.20251128T151123.csv") %>%
   clean_names()
 
-head(df)
-glimpse(df)
+df_clean <- df %>%
+  filter(means_of_travel != "Not stated")
+
+df_clean <- df_clean %>%
+  mutate(
+    health_group = if_else(
+      means_of_travel %in% c("On Foot", "Bicycle"),
+      "Healthy",
+      "Not healthy"
+    )
+  )
+
+
+head(df_clean)
+glimpse(df_clean)
 ```
 
 
 
 ```{r}
-summary(df)
+summary(df_clean)
 
 ```
 
@@ -27,7 +40,7 @@ summary(df)
 
 
 ```{r}
-df %>% summarise(
+df_clean %>% summarise(
   n_towns = n_distinct(towns_2022),
   n_means = n_distinct(means_of_travel),
   n_years = n_distinct(census_year)
@@ -39,7 +52,7 @@ df %>% summarise(
 
 
 ```{r}
-df %>%
+df_clean %>%
   group_by(towns_2022, means_of_travel) %>%
   summarise(total = sum(value), .groups = "drop") %>%
   arrange(desc(total)) %>%
@@ -50,7 +63,7 @@ df %>%
 
 
 ```{r}
-df %>%
+df_clean %>%
   group_by(means_of_travel) %>%
   summarise(total = sum(value)) %>%
   ggplot(aes(x = reorder(means_of_travel, total), y = total)) +
@@ -63,7 +76,7 @@ df %>%
 
 
 ```{r}
-df %>%
+df_clean %>%
   filter(means_of_travel == "On Foot") %>%
   slice_max(order_by = value, n = 10) %>%
   ggplot(aes(x = reorder(towns_2022, value), y = value)) +
@@ -76,12 +89,20 @@ df %>%
 
 
 ```{r}
-
+unique(df_clean$means_of_travel)
 ```
 
 
-```{r}
 
+```{r}
+df_clean %>%
+  group_by(health_group) %>%
+  summarise(total = sum(value)) %>%
+  ggplot(aes(x = reorder(health_group, total), y = total)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Total Usually Resident Population by Travel Mode",
+       x = "Health group", y = "Total")
 ```
 
 
