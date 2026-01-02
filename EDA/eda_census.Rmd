@@ -79,15 +79,6 @@ df_clean %>%
 ```
 
 
-
-```{r}
-
-#TODO: redo graph
-
-```
-
-
-
 ```{r}
 unique(df_clean$means_of_travel)
 ```
@@ -115,10 +106,25 @@ df_clean %>%
 
 ```{r}
 
+df_clean <- df_clean %>%
+  mutate(county = str_extract(towns_2022, "(?<=,).*"))
+df_plot_counties <- df_clean%>% count(county, health_group, name="count")%>%mutate(percentage = count / sum(count))
+
+df_plot_counties
 ```
 
 
 ```{r}
+library(ggplot2)
+library(scales)
+library(plotly)
+
+p <- ggplot(df_plot_counties, aes(x = county, y = percentage, fill = health_group)) +
+  geom_bar(stat = "identity") +
+  scale_y_continuous(labels = percent_format()) +
+  theme_minimal()
+
+ggplotly(p)%>%layout(xaxis=list(tickangle= -90))
 
 ```
 
