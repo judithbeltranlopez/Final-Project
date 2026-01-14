@@ -1,8 +1,8 @@
 ---
 title: MSc Health Data Science Project Title
 author:
-  - name: Student A Name
-  - name: Student B Name
+  - name: Judith Beltrán López
+  - name: Sananthaa Jagadesan Senthamaraikannan
     affil: 1
 affiliation:
   - num: 1
@@ -61,19 +61,16 @@ library(kableExtra)
 
 # Background and Problem
 
-This template has been produced using the `posterdown` package. It generates a standard conference-style poster layout.
+Daily travel to school plays an important role in shaping physical activity levels among children and adolescents. In recent years, increased reliance on unhealthy modes of transport, such as private cars, has reduced opportunities for active travel, including walking and cycling. In Ireland, factors such as school location, travel distance, and neighbourhood characteristics strongly influence whether students use healthy or unhealthy ways of travelling to school.
 
-<!-- You can add references by inserting the following ^[reference details here] -->
+Reduced physical activity linked to unhealthy transport choices contributes to rising levels of overweight and obesity in the population. Encouraging active school travel is therefore a key public health concern, particularly as travel habits formed during childhood often persist into adulthood.
 
-A common problem in clinical research is messed up data[^1]. It can lead to bias or nonsensical results. Appropriate statistical analysis can result in superb findings in such cases, with the right assumptions.
+# Objectives of Project
 
-[^1]: Evans 2010, doi: 10.6030/1939-067x-3.1.1
-
-## Objectives of Project
-
-1.  Explain the statistical issue or research question in health data science to be investigated.
-2.  Explore a method of analysis.
-3.  Apply any methods to selected datasets.
+1.  Map and analyse the spatial distribution of schools across Ireland.
+2.  Examine the distance between students’ residential locations and their schools, and investigate student mobility related to school attendance.
+3.  Analyse school travel behaviour and assess the prevalence of healthy versus less healthy commuting modes.
+4. Explore the relationship between school proximity, travel mode, and potential health implications.
 
 # Data Sources and Datasets
 
@@ -160,7 +157,7 @@ We will use the `plasticanalysis` package for this.
 
 # GitHub
 
-The code and datasets for this project can be viewed at our GitHub repository here: <https://github.com/>
+The code and datasets for this project can be viewed at our GitHub repository here: <https://github.com/judithbeltranlopez/Final-Project>
 
 
 
