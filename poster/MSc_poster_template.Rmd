@@ -61,15 +61,15 @@ library(kableExtra)
 
 # Background and Problem
 
-Daily travel to school plays an important role in shaping physical activity levels among children and adolescents. In recent years, increased reliance on unhealthy modes of transport, such as private cars, has reduced opportunities for active travel, including walking and cycling. In Ireland, factors such as school location, travel distance, and neighbourhood characteristics strongly influence whether students use healthy or unhealthy ways of travelling to school.
+Daily travel to school plays an important role in shaping physical activity levels among children and adolescents. In recent years, increased reliance on unactive modes of transport, such as private cars, has reduced opportunities for active travel, including walking and cycling. In Ireland, factors such as school location, travel distance, and neighbourhood characteristics strongly influence whether students use active or unactive ways of travelling to school.
 
-Reduced physical activity linked to unhealthy transport choices contributes to rising levels of overweight and obesity in the population. Encouraging active school travel is therefore a key public health concern, particularly as travel habits formed during childhood often persist into adulthood.
+Reduced physical activity linked to unactive transport choices contributes to rising levels of overweight and obesity in the population. Encouraging active school travel is therefore a key public health concern, particularly as travel habits formed during childhood often persist into adulthood.
 
 # Objectives of Project
 
 1.  Map and analyse the spatial distribution of schools across Ireland.
 2.  Examine the distance between students’ residential locations and their schools, and investigate student mobility related to school attendance.
-3.  Analyse school travel behaviour and assess the prevalence of healthy versus less healthy commuting modes.
+3.  Analyse school travel behaviour and assess the prevalence of active versus less active commuting modes.
 4. Explore the relationship between school proximity, travel mode, and potential health implications.
 
 # Data Sources and Datasets
