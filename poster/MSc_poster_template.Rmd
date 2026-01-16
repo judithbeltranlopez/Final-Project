@@ -1,5 +1,5 @@
 ---
-title: MSc Health Data Science Project Title
+title: Distance, Mobility and Mode Choice: A Spatial Analysis of School Travel Behaviour in Ireland
 author:
   - name: Judith Beltrán López
   - name: Sananthaa Jagadesan Senthamaraikannan
