@@ -1,9 +1,5 @@
 ---
-<<<<<<< HEAD
-title: Distance, Mobility and Mode Choice: A Spatial Analysis of School Travel Behaviour in Ireland
-=======
-title: Distance, Mobility, and Mode Choice: A Spatial Analysis of School Travel Behaviour in Ireland
->>>>>>> 2709e32 (title)
+title: "Distance, Mobility, and Mode Choice: A Spatial Analysis of School Travel Behaviour in Ireland"
 author:
   - name: Judith Beltrán López
   - name: Sananthaa Jagadesan Senthamaraikannan
@@ -65,24 +61,40 @@ library(kableExtra)
 
 # Background and Problem
 
-Daily travel to school plays an important role in shaping physical activity levels among children and adolescents. In recent years, increased reliance on unactive modes of transport, such as private cars, has reduced opportunities for active travel, including walking and cycling. In Ireland, factors such as school location, travel distance, and neighbourhood characteristics strongly influence whether students use active or unactive ways of travelling to school.
+Daily travel to school plays an important role in shaping physical activity levels among children and adolescents. In recent years, increased reliance on unhealthy modes of transport, such as private cars, has reduced opportunities for active travel, including walking and cycling. In Ireland, factors such as school location, travel distance, and neighbourhood characteristics strongly influence whether students use healthy or unhealthy ways of travelling to school.
 
-Reduced physical activity linked to unactive transport choices contributes to rising levels of overweight and obesity in the population. Encouraging active school travel is therefore a key public health concern, particularly as travel habits formed during childhood often persist into adulthood.
+Reduced physical activity linked to unhealthy transport choices contributes to rising levels of overweight and obesity in the population. Encouraging active school travel is therefore a key public health concern, particularly as travel habits formed during childhood often persist into adulthood.
 
 # Objectives of Project
 
 1.  Map and analyse the spatial distribution of schools across Ireland.
 2.  Examine the distance between students’ residential locations and their schools, and investigate student mobility related to school attendance.
-3.  Analyse school travel behaviour and assess the prevalence of active versus less active commuting modes.
+3.  Analyse school travel behaviour and assess the prevalence of healthy versus less healthy commuting modes.
 4. Explore the relationship between school proximity, travel mode, and potential health implications.
 
 # Data Sources and Datasets
 
-The syntax in this poster template and the `posterdown` package uses the same workflow approach as the R Markdown you know and love.
+Data on schools in Ireland are of the following Types:
 
-You can even use the bibliography the same way: Our data were taken from a cluster-randomised trial [^2], available from the [Irish Social Science Data Archive](https://www.ucd.ie/issda/data/).
+1. School-Level Data (Department of Education)
+School-level information for schools in Ireland, including school type, enrolment size, and location details (address, Eircode, latitude, and longitude). These data allow schools to be mapped and linked to geographic areas.
+(https://www.gov.ie/en/department-of-education/collections/data-on-individual-schools/)
 
-[^2]: Murphy et al. 2005 doi: 10.1186/1468-6708-6-11
+School enrolment data were treated as point-level observations and kriged to produce a continuous surface highlighting spatial patterns in school size.
+
+2. Settlement-Level Travel to Education Data (Central Statistics Office)
+Aggregated census data describing how people travel to education (e.g., walking, cycling, public transport, car) at settlement level. Data are available for multiple census years and include all forms of education and childcare, with some tables providing breakdowns by education level.
+
+https://data.cso.ie/table/SAP2022T11T1TOWN22 (2022 data - with all forms of education and childcare combined for ~800 settlements)
+https://data.cso.ie/table/SAP2016T11T1SET (2016 data - with all forms of education combined for ~800 settlements)
+https://data.cso.ie/table/E6013 (2016 data - with data separate for different periods of education for ~200 settlements)
+
+Census data were analysed at settlement level using predefined spatial boundaries to examine patterns in travel to education across Ireland.
+
+3. Spatial Boundary Data (CSO)
+Geographic boundary files for towns and urban areas in Ireland. These define the spatial extent of settlements and are used to map and link travel behaviour data to specific locations.
+https://www.cso.ie/en/census/census2022/census2022smallareapopulationstatistics/
+
 
 <!-- This #### below causes the columns to break -->
 
@@ -147,16 +159,12 @@ ggplotly(p)
 
 # Next Project Steps
 
-We plan to conduct further analysis using:
+Define Outcome Variables: Clearly decide what outcomes will be studied (e.g., exam results, enrollment changes, or resource availability) and ensure they are clearly measured and relevant to the research questions.
 
--   Variable discombobulation [^3]
--   Expand our minds with explosive machine learning [^4].
+Control for Confounding Factors: Identify factors such as socioeconomic background, location, school size, and demographics that may influence results, and account for them in the analysis.
 
-[^3]: Massey et al. 2005 doi: 15.36.413
+Further Statistical Analysis: Extend the exploratory analysis by applying regression or multivariable models to examine relationships while adjusting for other influencing factors.
 
-[^4]: Smith et al. 1991 doi: 12.36.486
-
-We will use the `plasticanalysis` package for this.
 
 
 # GitHub
