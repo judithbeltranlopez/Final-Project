@@ -79,7 +79,6 @@ Data on schools in Ireland are of the following Types:
 1. School-Level Data (Department of Education)
 School-level information for schools in Ireland, including school type, enrolment size, and location details (address, Eircode, latitude, and longitude). These data allow schools to be mapped and linked to geographic areas.
 (https://www.gov.ie/en/department-of-education/collections/data-on-individual-schools/)
-<<<<<<< HEAD
 
 School enrolment data were treated as point-level observations and kriged to produce a continuous surface highlighting spatial patterns in school size.
 
