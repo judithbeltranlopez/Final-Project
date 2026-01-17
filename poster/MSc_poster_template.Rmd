@@ -1,5 +1,9 @@
 ---
+<<<<<<< HEAD
 title: Distance, Mobility and Mode Choice: A Spatial Analysis of School Travel Behaviour in Ireland
+=======
+title: Distance, Mobility, and Mode Choice: A Spatial Analysis of School Travel Behaviour in Ireland
+>>>>>>> 2709e32 (title)
 author:
   - name: Judith Beltrán López
   - name: Sananthaa Jagadesan Senthamaraikannan
