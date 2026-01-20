@@ -110,6 +110,51 @@ ggplot(schools_df_clean, aes(x = longitude, y = latitude)) +
 
 
 ```{r}
+ggplot(schools_df_clean, aes(x = longitude, y = latitude)) +
+  stat_density_2d(
+    geom = "contour",
+    colour = "black"
+  ) +
+  coord_equal() +
+  theme_minimal() +
+  labs(
+    x = "Longitude",
+    y = "Latitude",
+    title = "Spatial density contours of schools in Ireland"
+  )
+
+
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+schools_df_clean <- schools_df %>% 
+  filter(!is.na(latitude), !is.na(longitude))
+
+ggplot(schools_df_clean, aes(x = longitude, y = latitude)) +
+  stat_density_2d(
+    aes(fill = after_stat(level)),
+    geom = "polygon",
+    colour = NA,
+    alpha = 0.8
+  ) +
+  scale_fill_viridis_c(option = "plasma") +
+  coord_equal() +
+  theme_minimal() +
+  labs(
+    fill = "School density",
+    x = "Longitude",
+    y = "Latitude",
+    title = "Spatial density of schools in Ireland"
+  )
+
+
+
+```
+
+```{r}
 # install if needed:
 # install.packages(c("rnaturalearth", "rnaturalearthdata"))
 

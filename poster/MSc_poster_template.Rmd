@@ -102,16 +102,49 @@ https://www.cso.ie/en/census/census2022/census2022smallareapopulationstatistics/
 
 #### 
 
-# Early Results / Descriptive Statistics of Datasets
+# Early Results 
 
-Usually you want to have a nice table displaying some important results that you have calculated. In `posterdown` this is as easy as using the `kable` table formatting you are probably use to as per typical R Markdown formatting.
+As a first step in the analysis, we focused on understanding the data we are working with. To achieve this, we explored the spatial distribution of schools across Ireland. By mapping school locations and producing a density plot, we were able to visualise areas with high and low concentrations of schools.
 
-You can reference tables like so: Table \@ref(tab:mytable). Some basic summaries of the dataset are below:
-
+This initial exploratory analysis helps to validate the dataset, identify spatial patterns, and highlight regional differences in school availability. Understanding where schools are clustered provides an essential foundation for subsequent analyses on school accessibility, travel distances, and the use of healthy versus unhealthy modes of transport to school.
 ```{r mytable, out.width='80%'}
-knitr::kable(iris[1:10, 1:4], caption = 'Table caption.',align = 'c',"html") %>%
-  kable_styling(font_size = 20)
+library(readxl)
+library(dplyr)
+library(ggplot2)
+
+
+schools_df <- read_excel("../data/Data_on_Individual_Schools_Mainstream_2024_25.xlsx", sheet=2)
+schools_df <- schools_df%>%rename("Roll_Number" = "Roll Number")%>%rename("longitude" = "School Longitude")%>%rename("latitude" = "School Latitude")
+
+
+schools_df <- schools_df %>%
+  rename(
+    AcademicYear = `Academic Year (Enrolment)`,
+    SchoolName   = `Official Name`
+  )
+
+
+schools_df_clean <- schools_df %>% 
+  filter(!is.na(latitude), !is.na(longitude))
+
+ggplot(schools_df_clean, aes(x = longitude, y = latitude)) +
+  stat_density_2d(
+    aes(fill = after_stat(level)),
+    geom = "polygon",
+    colour = NA,
+    alpha = 0.8
+  ) +
+  scale_fill_viridis_c(option = "plasma") +
+  coord_equal() +
+  theme_minimal() +
+  labs(
+    fill = "School density",
+    x = "Longitude",
+    y = "Latitude",
+    title = "Spatial density of schools in Ireland"
+  )
 ```
+Overall, the graph highlights a strong urban–rural divide in the spatial distribution of schools. Identifying Dublin as the main density hotspot is important, as such concentration is likely associated with shorter travel distances and a greater potential for active modes of transport, while lower-density regions may rely more heavily on motorised transport options due to longer travel distances.
 
 Figure \@ref(fig:standard-plot), and Figure \@ref(fig:morefigs) below show the patterns in our dataset. Make sure that all the details in your plots will be legible when printed (legend text, axis text, and any labels)
 
