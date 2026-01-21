@@ -214,9 +214,6 @@ ggplot() +
 
 The kriged surface shows higher predicted enrolment in areas where schools (red points) are more densely clustered, particularly around urban centres, while lower values appear in more rural and sparsely served areas. This highlights spatial inequality in school enrolment across County Galway.
 
-
-
-
 #### 
 
 # Next Project Steps
