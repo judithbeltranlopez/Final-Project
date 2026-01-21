@@ -203,13 +203,16 @@ grid <- grid[galway_proj, ]
 
 ## 5. Kriging *only for Galway*
 vgm_emp <- variogram(enrolment ~ 1, data = schools_krig)
-vgm_model <- fit.variogram(vgm_emp, vgm("Sph"))
+#vgm_model <- fit.variogram(vgm_emp, vgm("Sph"))
+fv <- fit.variogram(object = vgm_emp,
+                    model = vgm(psill = 0.5, model = "Sph",
+                                range = 900, nugget = 0.1))
 
 krig_result <- krige(
   enrolment ~ 1,
   locations = schools_krig,
   newdata    = grid,
-  model      = vgm_model
+  model      = fv
 )
 
 krig_stars <- st_rasterize(krig_result["var1.pred"])
