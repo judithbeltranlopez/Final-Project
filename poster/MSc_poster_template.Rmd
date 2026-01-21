@@ -7,7 +7,7 @@ author:
 affiliation:
   - num: 1
     address: School of Mathematical and Statistical Sciences, University of Galway
-logoleft_name: https&#58;//sport.universityofgalway.ie/assets/img/logo2.png
+logoleft_name: https://sport.universityofgalway.ie/assets/img/logo2.png
 
 poster_height: "594mm"
 poster_width: "841mm"
@@ -146,7 +146,7 @@ ggplot(schools_df_clean, aes(x = longitude, y = latitude)) +
 ```
 Overall, the graph highlights a strong urban–rural divide in the spatial distribution of schools. Identifying Dublin as the main density hotspot is important, as such concentration is likely associated with shorter travel distances and a greater potential for active modes of transport, while lower-density regions may rely more heavily on motorised transport options due to longer travel distances.
 
-```{r standard-plot, out.width='80%', fig.align='center', fig.cap='Great figure!', fig.height=4}
+```{r standard-plot1, out.width='80%', fig.align='center', fig.cap='Great figure!', fig.height=4}
 library(janitor)
 library(tidyverse)
 
@@ -171,7 +171,7 @@ df_clean %>%
     y = "Percentage (%)"
   )
 ```
-```{r standard-plot, out.width='80%', fig.align='center', fig.cap='School Population', fig.height=4}
+```{r standard-plot2, out.width='80%', fig.align='center', fig.cap='School Population', fig.height=4}
 library(janitor)
 library(tidyverse)
 library(dplyr)
@@ -189,7 +189,7 @@ ggplot() + geom_sf(data = ireland) + geom_sf(data = schools_sf, color = "red", s
 Kriging is a geostatistical interpolation method that uses spatial dependence to predict values at unsampled locations, making it useful for identifying spatial patterns and inequalities related to school locations, travel behaviour, and potential health impacts.
 
 
-```{r standard-plot, out.width='80%', fig.align='center', fig.cap='Resident Population by Travel Mode', fig.height=4}
+```{r standard-plot3, out.width='80%', fig.align='center', fig.cap='Resident Population by Travel Mode', fig.height=4}
 library(sf)
 library(dplyr)
 library(gstat)
