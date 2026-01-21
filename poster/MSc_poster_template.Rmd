@@ -171,13 +171,25 @@ df_clean %>%
     y = "Percentage (%)"
   )
 ```
-
-# ADD POPULATION AND TRAVEL MODE
+```{r standard-plot, out.width='80%', fig.align='center', fig.cap='School Population', fig.height=4}
+library(janitor)
+library(tidyverse)
+library(dplyr)
+library(sf)
+library(rnaturalearth)
+library(ggplot2)
+schools_df <- readr::read_csv("../data/School_Data_Eircode_2024_2025.csv",show_col_types = FALSE)
+ireland <- ne_countries(scale="medium",country="Ireland",returnclass="sf")
+schools_NA <- schools[complete.cases(schools$`School Latitude`,schools$`School Longitude`), ]
+schools_sf <- st_as_sf(schools_NA,coords = c("School Longitude", "School Latitude"),crs = 4326)
+ireland <- ne_countries(scale = "medium",country = "Ireland",returnclass = "sf")
+ggplot() + geom_sf(data = ireland) + geom_sf(data = schools_sf, color = "red", size = 1)
+```
 
 Kriging is a geostatistical interpolation method that uses spatial dependence to predict values at unsampled locations, making it useful for identifying spatial patterns and inequalities related to school locations, travel behaviour, and potential health impacts.
 
 
-```{r standard-plot, out.width='80%', fig.align='center', fig.cap='Great figure!', fig.height=4}
+```{r standard-plot, out.width='80%', fig.align='center', fig.cap='Resident Population by Travel Mode', fig.height=4}
 library(sf)
 library(dplyr)
 library(gstat)
