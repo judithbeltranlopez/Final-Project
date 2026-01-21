@@ -146,6 +146,32 @@ ggplot(schools_df_clean, aes(x = longitude, y = latitude)) +
 ```
 Overall, the graph highlights a strong urban–rural divide in the spatial distribution of schools. Identifying Dublin as the main density hotspot is important, as such concentration is likely associated with shorter travel distances and a greater potential for active modes of transport, while lower-density regions may rely more heavily on motorised transport options due to longer travel distances.
 
+```{r standard-plot, out.width='80%', fig.align='center', fig.cap='Great figure!', fig.height=4}
+library(janitor)
+library(tidyverse)
+
+df_clean <- read_csv("../data/SAP2022T11T1TOWN22.20251128T151123.csv", show_col_types = FALSE) %>%
+  clean_names() %>%
+  filter(means_of_travel != "Not stated") %>%
+  mutate(
+    health_group = if_else(means_of_travel %in% c("On Foot", "Bicycle"),
+                           "Healthy", "Not healthy")
+  )
+
+df_clean %>%
+  group_by(means_of_travel) %>%
+  summarise(total = sum(value, na.rm = TRUE), .groups = "drop") %>%
+  mutate(percentage = total / sum(total) * 100) %>%
+  ggplot(aes(x = reorder(means_of_travel, percentage), y = percentage)) +
+  geom_col(fill = "pink") +
+  coord_flip() +
+  labs(
+    title = "Percentage of Usually Resident Population by Travel Mode",
+    x = "Means of Travel",
+    y = "Percentage (%)"
+  )
+```
+
 # ADD POPULATION AND TRAVEL MODE
 
 Kriging is a geostatistical interpolation method that uses spatial dependence to predict values at unsampled locations, making it useful for identifying spatial patterns and inequalities related to school locations, travel behaviour, and potential health impacts.
