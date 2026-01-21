@@ -180,7 +180,7 @@ library(rnaturalearth)
 library(ggplot2)
 schools_df <- readr::read_csv("../data/School_Data_Eircode_2024_2025.csv",show_col_types = FALSE)
 ireland <- ne_countries(scale="medium",country="Ireland",returnclass="sf")
-schools_NA <- schools[complete.cases(schools$`School Latitude`,schools$`School Longitude`), ]
+schools_NA <- schools_df[complete.cases(schools_df$`School Latitude`,schools_df$`School Longitude`), ]
 schools_sf <- st_as_sf(schools_NA,coords = c("School Longitude", "School Latitude"),crs = 4326)
 ireland <- ne_countries(scale = "medium",country = "Ireland",returnclass = "sf")
 ggplot() + geom_sf(data = ireland) + geom_sf(data = schools_sf, color = "red", size = 1)
