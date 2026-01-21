@@ -107,7 +107,7 @@ https://www.cso.ie/en/census/census2022/census2022smallareapopulationstatistics/
 As a first step in the analysis, we focused on understanding the data we are working with. To achieve this, we explored the spatial distribution of schools across Ireland. By mapping school locations and producing a density plot, we were able to visualise areas with high and low concentrations of schools.
 
 This initial exploratory analysis helps to validate the dataset, identify spatial patterns, and highlight regional differences in school availability. Understanding where schools are clustered provides an essential foundation for subsequent analyses on school accessibility, travel distances, and the use of healthy versus unhealthy modes of transport to school.
-```{r mytable, out.width='80%'}
+```{r standard-plot, out.width='80%', fig.align='center', fig.cap='Great figure!', fig.height=4}
 library(readxl)
 library(dplyr)
 library(ggplot2)
@@ -148,49 +148,74 @@ Overall, the graph highlights a strong urban–rural divide in the spatial distr
 
 # ADD POPULATION AND TRAVEL MODE
 
-# ADD KRIGING GALWAY COUNTY
+Kriging is a geostatistical interpolation method that uses spatial dependence to predict values at unsampled locations, making it useful for identifying spatial patterns and inequalities related to school locations, travel behaviour, and potential health impacts.
 
-Figure \@ref(fig:standard-plot), and Figure \@ref(fig:morefigs) below show the patterns in our dataset. Make sure that all the details in your plots will be legible when printed (legend text, axis text, and any labels)
 
 ```{r standard-plot, out.width='80%', fig.align='center', fig.cap='Great figure!', fig.height=4}
-ggplot(mpg, aes(displ, hwy, colour = class)) + 
-  geom_point()
-```
+library(sf)
+library(dplyr)
+library(gstat)
+library(stars)
+library(ggplot2)
+library(rnaturalearth)
+library(rnaturalearthdata)
 
-```{r morefigs, out.width='80%', echo=FALSE, fig.cap='Amazing, right?!', fig.height=4}
+ireland_counties <- st_read("../data/gadm41_IRL_shp/gadm41_IRL_2.shp")
 
-df1 <- data.frame(dose=c("D0.5", "D1", "D2"),
-                len=c(4.2, 10, 29.5))
-ggplot(df1, aes(x=dose, y=len, fill=dose)) +
-  geom_bar(stat="identity") +
+galway <- ireland_counties %>%
+  filter(NAME_1 == "Galway")
+
+galway_proj <- st_transform(galway, 2157)
+
+schools_sf <- st_as_sf(
+  schools_df_clean,
+  coords = c("longitude", "latitude"),
+  crs = 4326,
+  remove = FALSE
+)
+
+schools_sf <- st_transform(schools_sf, 2157)
+schools_sf$enrolment <- as.numeric(schools_sf$`Enrolment per Return`)
+
+schools_krig <- schools_sf[galway_proj, ] %>%
+  filter(!is.na(enrolment))
+
+grid <- st_make_grid(
+  galway_proj,
+  cellsize = 5000,
+  what = "centers"
+)
+
+grid <- st_sf(grid_id = seq_along(grid), geometry = grid)
+grid <- grid[galway_proj, ]
+
+vgm_emp <- variogram(enrolment ~ 1, data = schools_krig)
+fv <- fit.variogram(object = vgm_emp,
+                    model = vgm(psill = 0.5, model = "Sph",
+                                range = 900, nugget = 0.1))
+
+krig_result <- krige(
+  enrolment ~ 1,
+  locations = schools_krig,
+  newdata    = grid,
+  model      = fv
+)
+
+krig_stars <- st_rasterize(krig_result["var1.pred"])
+
+ggplot() +
+  geom_stars(data = krig_stars) +
+  scale_fill_viridis_c(name = "Predicted\nEnrolment") +
+  geom_sf(data = galway_proj, fill = NA, color = "black") +
+  geom_sf(data = schools_krig, color = "red", size = 0.7) +
+  labs(title = "Kriged Enrolment Surface – County Galway") +
   theme_minimal()
-
 ```
 
-You can even make your plots interactive for the HTML version of the poster. You can use the HTML poster for the presentation session, and the PDF poster will be printed - so be sure the static version looks okay.
-
-```{r interactiveplot, out.width='80%', echo=FALSE, fig.cap='Amazing, right?!', fig.height=4}
-
-gapminder <- read_csv("https://raw.githubusercontent.com/datavizpyr/data/master/gapminder-FiveYearData.csv")
-df2 <- gapminder %>%
-  filter(year %in% c(1952,2007)) %>%
-  filter(continent=="Asia") 
-
-df2 <- df2 %>%
-  mutate(paired = rep(1:(n()/2),each=2),
-         year=factor(year))
-
-p <- df2 %>% 
-  ggplot(aes(x= lifeExp, y= country)) +
-  geom_line(aes(group = paired)) +
-  geom_point(aes(color=year), size=4) +
-  theme_bw() +
-  theme(legend.position="top")
+The kriged surface shows higher predicted enrolment in areas where schools (red points) are more densely clustered, particularly around urban centres, while lower values appear in more rural and sparsely served areas. This highlights spatial inequality in school enrolment across County Galway.
 
 
-ggplotly(p)
 
-```
 
 #### 
 
