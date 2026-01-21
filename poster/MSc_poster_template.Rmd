@@ -7,7 +7,7 @@ author:
 affiliation:
   - num: 1
     address: School of Mathematical and Statistical Sciences, University of Galway
-logoleft_name: https://sport.universityofgalway.ie/assets/img/logo2.png
+logoleft_name: https&#58;//sport.universityofgalway.ie/assets/img/logo2.png
 
 poster_height: "594mm"
 poster_width: "841mm"
