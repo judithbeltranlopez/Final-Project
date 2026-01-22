@@ -100,14 +100,14 @@ https://www.cso.ie/en/census/census2022/census2022smallareapopulationstatistics/
 
 <!-- You can change where you put these breaks, and the "column_numbers: 4" argument in the YAMLS header to change the layout of the poster, with care! -->
 
-#### 
+<!--####-->
 
 # Early Results 
 
 As a first step in the analysis, we focused on understanding the data we are working with. To achieve this, we explored the spatial distribution of schools across Ireland. By mapping school locations and producing a density plot, we were able to visualise areas with high and low concentrations of schools.
 
 This initial exploratory analysis helps to validate the dataset, identify spatial patterns, and highlight regional differences in school availability. Understanding where schools are clustered provides an essential foundation for subsequent analyses on school accessibility, travel distances, and the use of healthy versus unhealthy modes of transport to school.
-```{r standard-plot, out.width='80%', fig.align='center', fig.cap='Great figure!', fig.height=4}
+```{r standard-plot, out.width='80%', fig.align='center', fig.cap='Great figure!', fig.height=4,warning=FALSE}
 library(readxl)
 library(dplyr)
 library(ggplot2)
@@ -146,7 +146,7 @@ ggplot(schools_df_clean, aes(x = longitude, y = latitude)) +
 ```
 Overall, the graph highlights a strong urban–rural divide in the spatial distribution of schools. Identifying Dublin as the main density hotspot is important, as such concentration is likely associated with shorter travel distances and a greater potential for active modes of transport, while lower-density regions may rely more heavily on motorised transport options due to longer travel distances.
 
-```{r standard-plot1, out.width='80%', fig.align='center', fig.cap='Great figure!', fig.height=4}
+```{r standard-plot1, out.width='80%', fig.align='center', fig.cap='Great figure!', fig.height=4,warning=FALSE}
 library(janitor)
 library(tidyverse)
 
@@ -171,7 +171,7 @@ df_clean %>%
     y = "Percentage (%)"
   )
 ```
-```{r standard-plot2, out.width='80%', fig.align='center', fig.cap='School Population', fig.height=4}
+```{r standard-plot2, out.width='80%', fig.align='center', fig.cap='School Population', fig.height=4,warning=FALSE}
 library(janitor)
 library(tidyverse)
 library(dplyr)
@@ -189,7 +189,7 @@ ggplot() + geom_sf(data = ireland) + geom_sf(data = schools_sf, color = "red", s
 Kriging is a geostatistical interpolation method that uses spatial dependence to predict values at unsampled locations, making it useful for identifying spatial patterns and inequalities related to school locations, travel behaviour, and potential health impacts.
 
 
-```{r standard-plot3, out.width='80%', fig.align='center', fig.cap='Resident Population by Travel Mode', fig.height=4}
+```{r standard-plot3, out.width='80%', fig.align='center', fig.cap='Resident Population by Travel Mode', fig.height=4,warning=FALSE,message=FALSE}
 library(sf)
 library(dplyr)
 library(gstat)
@@ -198,7 +198,7 @@ library(ggplot2)
 library(rnaturalearth)
 library(rnaturalearthdata)
 
-ireland_counties <- st_read("../data/gadm41_IRL_shp/gadm41_IRL_2.shp")
+ireland_counties <- st_read("../data/gadm41_IRL_shp/gadm41_IRL_2.shp",quiet=TRUE)
 
 galway <- ireland_counties %>%
   filter(NAME_1 == "Galway")
@@ -232,12 +232,18 @@ fv <- fit.variogram(object = vgm_emp,
                     model = vgm(psill = 0.5, model = "Sph",
                                 range = 900, nugget = 0.1))
 
-krig_result <- krige(
-  enrolment ~ 1,
-  locations = schools_krig,
-  newdata    = grid,
-  model      = fv
-)
+krig_result <- local({
+  tmp <- tempfile()
+  sink(tmp)
+  on.exit(sink())
+  
+  krige(
+    enrolment ~ 1,
+    locations = schools_krig,
+    newdata   = grid,
+    model     = fv
+  )
+})
 
 krig_stars <- st_rasterize(krig_result["var1.pred"])
 
