@@ -251,11 +251,16 @@ krig_stars <- st_rasterize(krig_result["var1.pred"])
 
 ggplot() +
   geom_stars(data = krig_stars) +
-  scale_fill_viridis_c(name = "Predicted\nEnrolment") +
+  scale_fill_viridis_c(
+    name = "Predicted\nEnrolment",
+    limits = c(120, 130),
+    oob = scales::squish
+  ) +
   geom_sf(data = galway_proj, fill = NA, color = "black") +
   geom_sf(data = schools_krig, color = "red", size = 0.7) +
   labs(title = "Kriged Enrolment Surface – County Galway") +
   theme_minimal()
+
 ```
 
 The kriged surface shows higher predicted enrolment in areas where schools (red points) are more densely clustered, particularly around urban centres, while lower values appear in more rural and sparsely served areas. This highlights spatial inequality in school enrolment across County Galway.
