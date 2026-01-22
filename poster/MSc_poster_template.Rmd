@@ -109,43 +109,7 @@ https://www.cso.ie/en/census/census2022/census2022smallareapopulationstatistics/
 As a first step in the analysis, we focused on understanding the data we are working with. To achieve this, we explored the spatial distribution of schools across Ireland. By mapping school locations and producing a density plot, we were able to visualise areas with high and low concentrations of schools.
 
 This initial exploratory analysis helps to validate the dataset, identify spatial patterns, and highlight regional differences in school availability. Understanding where schools are clustered provides an essential foundation for subsequent analyses on school accessibility, travel distances, and the use of healthy versus unhealthy modes of transport to school.
-```{r standard-plot, out.width='80%', fig.align='center', fig.cap='Great figure!', fig.height=4,warning=FALSE}
-library(readxl)
-library(dplyr)
-library(ggplot2)
 
-
-schools_df <- read_excel("../data/Data_on_Individual_Schools_Mainstream_2024_25.xlsx", sheet=2)
-schools_df <- schools_df%>%rename("Roll_Number" = "Roll Number")%>%rename("longitude" = "School Longitude")%>%rename("latitude" = "School Latitude")
-
-
-schools_df <- schools_df %>%
-  rename(
-    AcademicYear = `Academic Year (Enrolment)`,
-    SchoolName   = `Official Name`
-  )
-
-
-schools_df_clean <- schools_df %>% 
-  filter(!is.na(latitude), !is.na(longitude))
-
-ggplot(schools_df_clean, aes(x = longitude, y = latitude)) +
-  stat_density_2d(
-    aes(fill = after_stat(level)),
-    geom = "polygon",
-    colour = NA,
-    alpha = 0.8
-  ) +
-  scale_fill_viridis_c(option = "plasma") +
-  coord_equal() +
-  theme_minimal() +
-  labs(
-    fill = "School density",
-    x = "Longitude",
-    y = "Latitude",
-    title = "Spatial density of schools in Ireland"
-  )
-```
 Overall, the graph highlights a strong urban–rural divide in the spatial distribution of schools. Identifying Dublin as the main density hotspot is important, as such concentration is likely associated with shorter travel distances and a greater potential for active modes of transport, while lower-density regions may rely more heavily on motorised transport options due to longer travel distances.
 
 ```{r standard-plot1, out.width='80%', fig.align='center', fig.cap='Great figure!', fig.height=4,warning=FALSE}
@@ -173,7 +137,7 @@ df_clean %>%
     y = "Percentage (%)"
   )
 ```
-```{r standard-plot2, out.width='80%', fig.align='center', fig.cap='School Population', fig.height=4,warning=FALSE}
+```{r standard-plot2, out.width='90%', fig.align='center', fig.cap='School Population', fig.height=4,warning=FALSE, message=FALSE}
 library(janitor)
 library(tidyverse)
 library(dplyr)
@@ -185,7 +149,8 @@ ireland <- ne_countries(scale="medium",country="Ireland",returnclass="sf")
 schools_NA <- schools_df[complete.cases(schools_df$`School Latitude`,schools_df$`School Longitude`), ]
 schools_sf <- st_as_sf(schools_NA,coords = c("School Longitude", "School Latitude"),crs = 4326)
 ireland <- ne_countries(scale = "medium",country = "Ireland",returnclass = "sf")
-ggplot() + geom_sf(data = ireland) + geom_sf(data = schools_sf, color = "red", size = 1)
+ggplot() + geom_sf(data = ireland) + geom_sf(data = schools_sf, color = "red", size = 1)+theme_void()
+
 ```
 
 Kriging is a geostatistical interpolation method that uses spatial dependence to predict values at unsampled locations, making it useful for identifying spatial patterns and inequalities related to school locations, travel behaviour, and potential health impacts.
@@ -196,9 +161,15 @@ library(sf)
 library(dplyr)
 library(gstat)
 library(stars)
+library(readxl)
 library(ggplot2)
 library(rnaturalearth)
 library(rnaturalearthdata)
+
+schools_df <- read_excel("../data/Data_on_Individual_Schools_Mainstream_2024_25.xlsx", sheet=2)
+schools_df <- schools_df%>%rename("Roll_Number" = "Roll Number")%>%rename("longitude" = "School Longitude")%>%rename("latitude" = "School Latitude")
+schools_df_clean <- schools_df %>% 
+  filter(!is.na(latitude), !is.na(longitude))
 
 ireland_counties <- st_read("../data/gadm41_IRL_shp/gadm41_IRL_2.shp",quiet=TRUE)
 
