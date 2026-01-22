@@ -60,10 +60,12 @@ library(kableExtra)
 ```
 
 # Background and Problem
+- Daily travel to school significantly influences physical activity levels in children and adolescents  
+- Increased use of unhealthy transport has reduced walking and cycling  
+- Active travel provides important opportunities for regular physical activity  
+- In Ireland, school location, distance to school, and neighbourhood features affect travel choices  
+- Travel habits formed in childhood often continue into adulthood  
 
-Daily travel to school plays an important role in shaping physical activity levels among children and adolescents. In recent years, increased reliance on unhealthy modes of transport, such as private cars, has reduced opportunities for active travel, including walking and cycling. In Ireland, factors such as school location, travel distance, and neighbourhood characteristics strongly influence whether students use healthy or unhealthy ways of travelling to school.
-
-Reduced physical activity linked to unhealthy transport choices contributes to rising levels of overweight and obesity in the population. Encouraging active school travel is therefore a key public health concern, particularly as travel habits formed during childhood often persist into adulthood.
 
 # Objectives of Project
 
