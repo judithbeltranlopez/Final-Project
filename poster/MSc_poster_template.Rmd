@@ -156,83 +156,142 @@ ggplot() + geom_sf(data = ireland) + geom_sf(data = schools_sf, color = "red", s
 Kriging is a geostatistical interpolation method that uses spatial dependence to predict values at unsampled locations, making it useful for identifying spatial patterns and inequalities related to school locations, travel behaviour, and potential health impacts.
 
 
-```{r standard-plot3, out.width='80%', fig.align='center', fig.cap='Resident Population by Travel Mode', fig.height=4,warning=FALSE,message=FALSE}
-library(sf)
-library(dplyr)
-library(gstat)
-library(stars)
+```{r standard-plot3, out.width='80%', fig.align='center', fig.cap='Kriging schools in Co Galway', fig.height=4,warning=FALSE,message=FALSE}
+
 library(readxl)
+library(dplyr)
+library(sf)
+library(sp)
+library(gstat)
 library(ggplot2)
-library(rnaturalearth)
-library(rnaturalearthdata)
+library(viridis)
 
-schools_df <- read_excel("../data/Data_on_Individual_Schools_Mainstream_2024_25.xlsx", sheet=2)
-schools_df <- schools_df%>%rename("Roll_Number" = "Roll Number")%>%rename("longitude" = "School Longitude")%>%rename("latitude" = "School Latitude")
-schools_df_clean <- schools_df %>% 
-  filter(!is.na(latitude), !is.na(longitude))
+schools_df <- read_excel("../data/Data_on_Individual_Schools_Mainstream_2024_25.xlsx", sheet = 2) %>%
+  rename(
+    Roll_Number = `Roll Number`,
+    longitude   = `School Longitude`,
+    latitude    = `School Latitude`
+  ) %>%
+  filter(!is.na(latitude), !is.na(longitude)) %>%
+  mutate(
+    enrolment = suppressWarnings(as.numeric(`Enrolment per Return`))
+  ) %>%
+  filter(is.finite(enrolment), enrolment > 0) %>%     # avoid log(0) and NA
+  mutate(log_enrol = log(enrolment)) %>%
+  filter(is.finite(log_enrol))
 
-ireland_counties <- st_read("../data/gadm41_IRL_shp/gadm41_IRL_2.shp",quiet=TRUE)
+ireland_counties <- st_read("../data/gadm41_IRL_shp/gadm41_IRL_2.shp", quiet = TRUE)
 
-galway <- ireland_counties %>%
-  filter(NAME_1 == "Galway")
-
-galway_proj <- st_transform(galway, 2157)
+galway_sf <- ireland_counties %>%
+  filter(NAME_1 == "Galway") %>%
+  st_transform(2157)
 
 schools_sf <- st_as_sf(
-  schools_df_clean,
+  schools_df,
   coords = c("longitude", "latitude"),
   crs = 4326,
   remove = FALSE
+) %>%
+  st_transform(2157)
+
+schools_galway_sf <- schools_sf[galway_sf, ] %>%
+  filter(is.finite(log_enrol))
+
+schools_sp <- as(schools_galway_sf, "Spatial")
+
+
+
+grid_centers <- st_make_grid(galway_sf, cellsize = 5000, what = "centers")
+grid_sf <- st_sf(grid_id = seq_along(grid_centers), geometry = grid_centers)
+grid_sf <- grid_sf[galway_sf, ]
+grid_sp <- as(grid_sf, "Spatial")
+
+stopifnot(length(grid_sp) > 0)
+
+
+df_sp <- as.data.frame(schools_sp)
+xy <- coordinates(schools_sp)
+df_sp$x <- xy[, 1]
+df_sp$y <- xy[, 2]
+
+dup_n <- sum(duplicated(df_sp[, c("x", "y")]))
+
+
+schools_agg <- df_sp %>%
+  group_by(x, y) %>%
+  summarise(log_enrol = mean(log_enrol, na.rm = TRUE), .groups = "drop")
+
+coordinates(schools_agg) <- ~ x + y
+proj4string(schools_agg) <- proj4string(schools_sp)
+
+stopifnot(nrow(as.data.frame(schools_agg)) > 10)
+
+
+v <- variogram(log_enrol ~ 1, data = schools_agg, width = 5000, cutoff = 60000)
+
+v_init <- vgm(psill = 0.8, model = "Exp", range = 30000, nugget = 0.1)
+fv <- fit.variogram(v, v_init)
+
+sink(tempfile())
+kriged_sp <- suppressMessages(krige(
+  formula   = log_enrol ~ 1,
+  locations = schools_agg,
+  newdata   = grid_sp,
+  model     = fv,
+  nmax      = 100,   
+  nmin      = 1,     
+  maxdist   = 1e6    
+))
+
+kriged_sp$enrol_pred <- exp(kriged_sp$var1.pred)
+kriged_sp$sd_log     <- sqrt(kriged_sp$var1.var)
+
+
+
+kriged_sf <- st_as_sf(kriged_sp)
+schools_sf_plot <- st_as_sf(schools_agg)
+
+
+
+coords <- st_coordinates(kriged_sf)
+
+kriged_df <- cbind(
+  as.data.frame(kriged_sf),
+  x = coords[,1],
+  y = coords[,2]
 )
-
-schools_sf <- st_transform(schools_sf, 2157)
-schools_sf$enrolment <- as.numeric(schools_sf$`Enrolment per Return`)
-
-schools_krig <- schools_sf[galway_proj, ] %>%
-  filter(!is.na(enrolment))
-
-grid <- st_make_grid(
-  galway_proj,
-  cellsize = 5000,
-  what = "centers"
-)
-
-grid <- st_sf(grid_id = seq_along(grid), geometry = grid)
-grid <- grid[galway_proj, ]
-
-vgm_emp <- variogram(enrolment ~ 1, data = schools_krig)
-fv <- fit.variogram(object = vgm_emp,
-                    model = vgm(psill = 0.5, model = "Sph",
-                                range = 900, nugget = 0.1))
-
-krig_result <- local({
-  tmp <- tempfile()
-  sink(tmp)
-  on.exit(sink())
-  
-  krige(
-    enrolment ~ 1,
-    locations = schools_krig,
-    newdata   = grid,
-    model     = fv
-  )
-})
-
-krig_stars <- st_rasterize(krig_result["var1.pred"])
 
 ggplot() +
-  geom_stars(data = krig_stars) +
-  scale_fill_viridis_c(
-    name = "Predicted\nEnrolment",
-    limits = c(120, 130),
-    oob = scales::squish
+  geom_tile(
+    data = kriged_df,
+    aes(x = x, y = y, fill = enrol_pred),
+    width = 5000,
+    height = 5000
   ) +
-  geom_sf(data = galway_proj, fill = NA, color = "black") +
-  geom_sf(data = schools_krig, color = "red", size = 0.7) +
+  geom_sf(data = galway_sf, fill = NA, color = "black", linewidth = 0.4) +
+  geom_sf(data = schools_sf_plot, color = "red", size = 0.6) +
+  scale_fill_viridis_c(name = "Pred enrolment") +
+  coord_sf(crs = st_crs(galway_sf)) +
   labs(title = "Kriged Enrolment Surface – County Galway") +
-  theme_minimal()
+  theme_bw()
+
+
+ggplot() +
+  geom_tile(
+    data = kriged_df,
+    aes(x = x, y = y, fill = var1.var),
+    width = 5000,
+    height = 5000
+  ) +
+  geom_sf(data = galway_sf, fill = NA, color = "black", linewidth = 0.4) +
+  geom_sf(data = schools_sf_plot, color = "red", size = 0.6) +
+  scale_fill_viridis_c(name = "Kriging variance", trans = "log") +
+  coord_sf(crs = st_crs(galway_sf)) +
+  labs(title = "Kriging Uncertainty – County Galway") +
+  theme_bw()
 
 ```
+
 
 The kriged surface shows higher predicted enrolment in areas where schools (red points) are more densely clustered, particularly around urban centres, while lower values appear in more rural and sparsely served areas. This highlights spatial inequality in school enrolment across County Galway.
 
