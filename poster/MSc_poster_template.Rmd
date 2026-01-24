@@ -41,6 +41,11 @@ div.poster_title{
 div.footnotes {
     font-size: 18pt;
 }
+.leaflet-container {
+  width: 100% !important;
+  height: 460px !important;
+  border-radius: 12px;
+}
 ```
 
 <!-- Don't change anything above, except the title and author names, unless you know what you are doing. -->
@@ -57,6 +62,11 @@ options(knitr.table.format = "html")
 library(tidyverse)
 library(plotly)
 library(kableExtra)
+library(leaflet)
+library(htmltools)
+library(janitor)
+library(sf)
+library(scales)
 ```
 
 # Background and Problem
@@ -75,29 +85,11 @@ library(kableExtra)
 4. Explore the relationship between school proximity, travel mode, and potential health implications.
 
 # Data Sources and Datasets
-
 Data on schools in Ireland are of the following Types:
 
-1. School-Level Data (Department of Education)
-School-level information for schools in Ireland, including school type, enrolment size, and location details (address, Eircode, latitude, and longitude). These data allow schools to be mapped and linked to geographic areas.
-(https://www.gov.ie/en/department-of-education/collections/data-on-individual-schools/)
-
-School enrolment data were treated as point-level observations and kriged to produce a continuous surface highlighting spatial patterns in school size.
-
-2. Settlement-Level Travel to Education Data (Central Statistics Office)
-Aggregated census data describing how people travel to education (e.g., walking, cycling, public transport, car) at settlement level. Data are available for multiple census years and include all forms of education and childcare, with some tables providing breakdowns by education level.
-
-https://data.cso.ie/table/SAP2022T11T1TOWN22 (2022 data - with all forms of education and childcare combined for ~800 settlements)
-https://data.cso.ie/table/SAP2016T11T1SET (2016 data - with all forms of education combined for ~800 settlements)
-https://data.cso.ie/table/E6013 (2016 data - with data separate for different periods of education for ~200 settlements)
-
-Census data were analysed at settlement level using predefined spatial boundaries to examine patterns in travel to education across Ireland.
-
-3. Spatial Boundary Data (CSO)
-Geographic boundary files for towns and urban areas in Ireland. These define the spatial extent of settlements and are used to map and link travel behaviour data to specific locations.
-https://www.cso.ie/en/census/census2022/census2022smallareapopulationstatistics/
-
-
+-School-Level Data (Department of Education): School type, enrolment, and geographic location (Eircode,latitude,       longitude).
+-Settlement-Level Travel Data (CSO): Census data on modes of travel to education at settlement level across multiple years.
+-Spatial Boundary Data (CSO): Geographic boundaries for towns and urban areas used for spatial mapping and analysis.
 <!-- This #### below causes the columns to break -->
 
 <!-- You can change where you put these breaks, and the "column_numbers: 4" argument in the YAMLS header to change the layout of the poster, with care! -->
@@ -137,20 +129,61 @@ df_clean %>%
     y = "Percentage (%)"
   )
 ```
-```{r standard-plot2, out.width='90%', fig.align='center', fig.cap='School Population', fig.height=4,warning=FALSE, message=FALSE}
-library(janitor)
-library(tidyverse)
-library(dplyr)
-library(sf)
-library(rnaturalearth)
-library(ggplot2)
-schools_df <- readr::read_csv("../data/School_Data_Eircode_2024_2025.csv",show_col_types = FALSE)
-ireland <- ne_countries(scale="medium",country="Ireland",returnclass="sf")
-schools_NA <- schools_df[complete.cases(schools_df$`School Latitude`,schools_df$`School Longitude`), ]
-schools_sf <- st_as_sf(schools_NA,coords = c("School Longitude", "School Latitude"),crs = 4326)
-ireland <- ne_countries(scale = "medium",country = "Ireland",returnclass = "sf")
-ggplot() + geom_sf(data = ireland) + geom_sf(data = schools_sf, color = "red", size = 1)+theme_void()
 
+```{r live-map, out.width='100%', fig.height=4.7}
+schools_df <- readr::read_csv("../data/School_Data_Eircode_2024_2025.csv",
+  locale = readr::locale(encoding = "Latin1"),
+  show_col_types = FALSE
+) |>
+  janitor::clean_names()
+
+schools_sf <- schools_df |>
+  filter(!is.na(school_latitude), !is.na(school_longitude)) |>
+  st_as_sf(
+    coords = c("school_longitude", "school_latitude"),
+    crs = 4326,
+    remove = FALSE
+  )
+
+enrol <- schools_sf$total_2024_2025
+enrol[is.na(enrol)] <- 0
+radius <- rescale(enrol, to = c(2, 9))
+
+pal <- colorFactor(
+  palette = "Dark2",
+  domain  = schools_sf$county,
+  na.color = "#999999"
+)
+
+leaflet(schools_sf) |>
+  addProviderTiles(providers$CartoDB.Positron) |>
+  addCircleMarkers(
+    lng = ~school_longitude,
+    lat = ~school_latitude,
+    radius = radius,
+    stroke = FALSE,
+    fillOpacity = 0.75,
+    color = ~pal(county),
+    popup = ~HTML(paste0(
+      "<b>", official_school_name, "</b><br>",
+      "County: ", county, "<br>",
+      ifelse(is.na(total_2024_2025),
+             "",
+             paste0("Enrolment: ", total_2024_2025))
+    ))
+  ) |>
+  addLegend(
+    "bottomright",
+    pal = pal,
+    values = ~county,
+    title = "County"
+  ) |>
+  fitBounds(
+    lng1 = min(schools_sf$school_longitude, na.rm = TRUE),
+    lat1 = min(schools_sf$school_latitude,  na.rm = TRUE),
+    lng2 = max(schools_sf$school_longitude, na.rm = TRUE),
+    lat2 = max(schools_sf$school_latitude,  na.rm = TRUE)
+  )
 ```
 
 Kriging is a geostatistical interpolation method that uses spatial dependence to predict values at unsampled locations, making it useful for identifying spatial patterns and inequalities related to school locations, travel behaviour, and potential health impacts.
@@ -232,7 +265,7 @@ v <- variogram(log_enrol ~ 1, data = schools_agg, width = 5000, cutoff = 60000)
 v_init <- vgm(psill = 0.8, model = "Exp", range = 30000, nugget = 0.1)
 fv <- fit.variogram(v, v_init)
 
-sink(tempfile())
+#sink(tempfile())
 kriged_sp <- suppressMessages(krige(
   formula   = log_enrol ~ 1,
   locations = schools_agg,
@@ -298,19 +331,13 @@ The kriged surface shows higher predicted enrolment in areas where schools (red 
 #### 
 
 # Next Project Steps
-
-Define Outcome Variables: Clearly decide what outcomes will be studied (e.g., exam results, enrollment changes, or resource availability) and ensure they are clearly measured and relevant to the research questions.
-
-Control for Confounding Factors: Identify factors such as socioeconomic background, location, school size, and demographics that may influence results, and account for them in the analysis.
-
-Further Statistical Analysis: Extend the exploratory analysis by applying regression or multivariable models to examine relationships while adjusting for other influencing factors.
-
+-Define outcome variables (e.g. enrolment size, accessibility, resource availability)
+-Control for confounding factors (socioeconomic context, location, school size, demographics)
+-Apply county-level kriging to examine spatial variation in school enrolment
+-Extend analysis using regression or multivariable models to assess relationships between distance, travel mode, and    school characteristics
 
 # GitHub
-
-The code and datasets for this project can be viewed at our GitHub repository here: <https://github.com/judithbeltranlopez/Final-Project>
-
-
+This project can be viewed at our GitHub repository here: <https://github.com/judithbeltranlopez/Final-Project>
 
 # References
 
