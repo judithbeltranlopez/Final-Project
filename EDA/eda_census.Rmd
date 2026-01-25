@@ -19,8 +19,8 @@ df_clean <- df_clean %>%
   mutate(
     health_group = if_else(
       means_of_travel %in% c("On Foot", "Bicycle"),
-      "Healthy",
-      "Not healthy"
+      "Active",
+      "Not active"
     )
   )
 
@@ -130,6 +130,25 @@ ggplotly(p)%>%layout(xaxis=list(tickangle= -90))
 
 
 ```{r}
+df_active_town <- df_clean %>%
+  filter(means_of_travel %in% c("On Foot", "Bicycle")) %>%
+  group_by(towns_2022) %>%
+  summarise(total_active = sum(value), .groups = "drop")
+
+ggplot(df_active_town, aes(x = total_active)) +
+  geom_histogram(
+    bins = 30,
+    fill = "steelblue",
+    color = "white"
+  ) +
+  scale_x_log10() +
+  labs(
+    title = "Distribution of Total Active Transport Users Across Towns",
+    x = "Total active-mode users (log scale)",
+    y = "Number of towns"
+  ) +
+  theme_minimal()
+
 
 ```
 
