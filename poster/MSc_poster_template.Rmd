@@ -1,5 +1,5 @@
 ---
-title: "Distance, Mobility, and Mode Choice: A Spatial Analysis of School Travel Behaviour in Ireland"
+title: "Distance,Mobility,and Mode Choice:A Spatial Analysis of School Travel Behaviour in Ireland"
 author:
   - name: Judith Beltrán López
   - name: Sananthaa Jagadesan Senthamaraikannan
@@ -39,12 +39,22 @@ div.poster_title{
     break-after: column;
 }
 div.footnotes {
-    font-size: 18pt;
+    font-size: 16pt;
 }
 .leaflet-container {
   width: 100% !important;
   height: 460px !important;
   border-radius: 12px;
+}
+
+.bib {
+  font-size: 18pt;
+  line-height: 1.15;
+}
+
+.bib a {
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 ```
 
@@ -350,7 +360,23 @@ ggplot(df_active_town, aes(x = total_active)) +
 # GitHub
 This project can be viewed at our GitHub repository here: <https://github.com/judithbeltranlopez/Final-Project>
 
-# References
+# Bibliography
 
+<div class="bib">
+
+- Department of Education (Ireland). *Data on Individual Schools*.  
+  https://www.gov.ie/en/department-of-education/collections/data-on-individual-schools/
+
+- Central Statistics Office (CSO). *SAP2022T11T1TOWN22*.  
+  https://data.cso.ie/table/SAP2022T11T1TOWN22
+
+- Central Statistics Office (CSO). *SAP2016T11T1SET*.  
+  https://data.cso.ie/table/SAP2016T11T1SET
+
+- Central Statistics Office (CSO). *E6013*.  
+  https://data.cso.ie/table/E6013
+
+- Central Statistics Office (CSO). *Census 2022 Small Area Population Statistics*.  
+  https://www.cso.ie/en/census/census2022/census2022smallareapopulationstatistics/
 
 
