@@ -98,11 +98,7 @@ Data on schools in Ireland are of the following Types:
 
 # Early Results 
 
-As a first step in the analysis, we focused on understanding the data we are working with. To achieve this, we explored the spatial distribution of schools across Ireland. By mapping school locations and producing a density plot, we were able to visualise areas with high and low concentrations of schools.
-
-This initial exploratory analysis helps to validate the dataset, identify spatial patterns, and highlight regional differences in school availability. Understanding where schools are clustered provides an essential foundation for subsequent analyses on school accessibility, travel distances, and the use of healthy versus unhealthy modes of transport to school.
-
-Overall, the graph highlights a strong urban–rural divide in the spatial distribution of schools. Identifying Dublin as the main density hotspot is important, as such concentration is likely associated with shorter travel distances and a greater potential for active modes of transport, while lower-density regions may rely more heavily on motorised transport options due to longer travel distances.
+The analysis began with an exploratory examination of the spatial distribution of schools across Ireland using maps and density plots. This helped validate the dataset, reveal spatial patterns, and highlight regional differences in school availability. The results show a clear urban–rural divide, with Dublin emerging as the main concentration of schools, suggesting shorter travel distances and greater potential for active transport, while rural areas are more likely to depend on motorised transport due to longer distances.
 
 ```{r standard-plot1, out.width='80%', fig.align='center', fig.cap='Great figure!', fig.height=4,warning=FALSE}
 library(janitor)
@@ -130,7 +126,7 @@ df_clean %>%
   )
 ```
 
-```{r live-map, out.width='100%', fig.height=4.7}
+```{r live-map, out.width='100%', fig.height=4.7, message=FALSE, warning=FALSE}
 schools_df <- readr::read_csv("../data/School_Data_Eircode_2024_2025.csv",
   locale = readr::locale(encoding = "Latin1"),
   show_col_types = FALSE
@@ -186,10 +182,10 @@ leaflet(schools_sf) |>
   )
 ```
 
-Kriging is a geostatistical interpolation method that uses spatial dependence to predict values at unsampled locations, making it useful for identifying spatial patterns and inequalities related to school locations, travel behaviour, and potential health impacts.
+Kriging is a geostatistical interpolation technique that uses spatial relationships to estimate values at unsampled locations, helping to reveal spatial patterns and inequalities in school locations, travel behaviour, and related health impacts.
 
 
-```{r standard-plot3, out.width='80%', fig.align='center', fig.cap='Kriging schools in Co Galway', fig.height=4,warning=FALSE,message=FALSE}
+```{r standard-plot3, out.width='90%', fig.align='center', fig.cap='Kriging schools in Co Galway', fig.height=4,warning=FALSE,message=FALSE}
 
 library(readxl)
 library(dplyr)
@@ -265,7 +261,7 @@ v <- variogram(log_enrol ~ 1, data = schools_agg, width = 5000, cutoff = 60000)
 v_init <- vgm(psill = 0.8, model = "Exp", range = 30000, nugget = 0.1)
 fv <- fit.variogram(v, v_init)
 
-#sink(tempfile())
+sink(tempfile())
 kriged_sp <- suppressMessages(krige(
   formula   = log_enrol ~ 1,
   locations = schools_agg,
@@ -308,6 +304,8 @@ ggplot() +
   labs(title = "Kriged Enrolment Surface – County Galway") +
   theme_bw()
 
+```
+```{r standard-plot4, out.width='90%', fig.align='center', fig.cap='Kriging schools in Co Galway', fig.height=4,warning=FALSE,message=FALSE}
 
 ggplot() +
   geom_tile(
@@ -324,10 +322,6 @@ ggplot() +
   theme_bw()
 
 ```
-
-
-The kriged surface shows higher predicted enrolment in areas where schools (red points) are more densely clustered, particularly around urban centres, while lower values appear in more rural and sparsely served areas. This highlights spatial inequality in school enrolment across County Galway.
-
 #### 
 
 # Next Project Steps
