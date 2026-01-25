@@ -87,9 +87,9 @@ library(scales)
 # Data Sources and Datasets
 Data on schools in Ireland are of the following Types:
 
--School-Level Data (Department of Education): School type, enrolment, and geographic location (Eircode,latitude,       longitude).
--Settlement-Level Travel Data (CSO): Census data on modes of travel to education at settlement level across multiple years.
--Spatial Boundary Data (CSO): Geographic boundaries for towns and urban areas used for spatial mapping and analysis.
+- School-Level Data (Department of Education): School type, enrolment, and geographic location (Eircode,latitude,       longitude).
+- Settlement-Level Travel Data (CSO): Census data on modes of travel to education at settlement level across multiple years.
+- Spatial Boundary Data (CSO): Geographic boundaries for towns and urban areas used for spatial mapping and analysis.
 <!-- This #### below causes the columns to break -->
 
 <!-- You can change where you put these breaks, and the "column_numbers: 4" argument in the YAMLS header to change the layout of the poster, with care! -->
@@ -100,33 +100,7 @@ Data on schools in Ireland are of the following Types:
 
 The analysis began with an exploratory examination of the spatial distribution of schools across Ireland using maps and density plots. This helped validate the dataset, reveal spatial patterns, and highlight regional differences in school availability. The results show a clear urban–rural divide, with Dublin emerging as the main concentration of schools, suggesting shorter travel distances and greater potential for active transport, while rural areas are more likely to depend on motorised transport due to longer distances.
 
-```{r standard-plot1, out.width='80%', fig.align='center', fig.cap='Great figure!', fig.height=4,warning=FALSE}
-library(janitor)
-library(tidyverse)
-
-df_clean <- read_csv("../data/SAP2022T11T1TOWN22.20251128T151123.csv", show_col_types = FALSE) %>%
-  clean_names() %>%
-  filter(means_of_travel != "Not stated") %>%
-  mutate(
-    health_group = if_else(means_of_travel %in% c("On Foot", "Bicycle"),
-                           "Healthy", "Not healthy")
-  )
-
-df_clean %>%
-  group_by(means_of_travel) %>%
-  summarise(total = sum(value, na.rm = TRUE), .groups = "drop") %>%
-  mutate(percentage = total / sum(total) * 100) %>%
-  ggplot(aes(x = reorder(means_of_travel, percentage), y = percentage)) +
-  geom_col(fill = "pink") +
-  coord_flip() +
-  labs(
-    title = "Percentage of Usually Resident Population by Travel Mode",
-    x = "Means of Travel",
-    y = "Percentage (%)"
-  )
-```
-
-```{r live-map, out.width='100%', fig.height=4.7, message=FALSE, warning=FALSE}
+```{r live-map, out.width='95%', fig.height=5, message=FALSE, warning=FALSE, fig.cap='Density plots of Schools in Ireland'}
 schools_df <- readr::read_csv("../data/School_Data_Eircode_2024_2025.csv",
   locale = readr::locale(encoding = "Latin1"),
   show_col_types = FALSE
@@ -185,7 +159,7 @@ leaflet(schools_sf) |>
 Kriging is a geostatistical interpolation technique that uses spatial relationships to estimate values at unsampled locations, helping to reveal spatial patterns and inequalities in school locations, travel behaviour, and related health impacts.
 
 
-```{r standard-plot3, out.width='90%', fig.align='center', fig.cap='Kriging schools in Co Galway', fig.height=4,warning=FALSE,message=FALSE}
+```{r standard-plot3, out.width='95%', fig.align='center', fig.cap='Kriging schools in Co Galway', fig.height=4,warning=FALSE,message=FALSE, results="hide"}
 
 library(readxl)
 library(dplyr)
@@ -261,6 +235,11 @@ v <- variogram(log_enrol ~ 1, data = schools_agg, width = 5000, cutoff = 60000)
 v_init <- vgm(psill = 0.8, model = "Exp", range = 30000, nugget = 0.1)
 fv <- fit.variogram(v, v_init)
 
+#delete message
+tf <- tempfile()
+sink(tf)
+on.exit(sink(), add = TRUE)
+
 kriged_sp <- invisible(suppressMessages(krige(
   formula   = log_enrol ~ 1,
   locations = schools_agg,
@@ -300,11 +279,10 @@ ggplot() +
   geom_sf(data = schools_sf_plot, color = "red", size = 0.6) +
   scale_fill_viridis_c(name = "Pred enrolment") +
   coord_sf(crs = st_crs(galway_sf)) +
-  labs(title = "Kriged Enrolment Surface – County Galway") +
   theme_bw()
 
 ```
-```{r standard-plot4, out.width='90%', fig.align='center', fig.cap='Kriging schools in Co Galway', fig.height=4,warning=FALSE,message=FALSE}
+```{r standard-plot4, out.width='95%', fig.align='center', fig.cap='Kriging schools in Co Galway', fig.height=4,warning=FALSE,message=FALSE}
 
 ggplot() +
   geom_tile(
@@ -317,17 +295,16 @@ ggplot() +
   geom_sf(data = schools_sf_plot, color = "red", size = 0.6) +
   scale_fill_viridis_c(name = "Kriging variance", trans = "log") +
   coord_sf(crs = st_crs(galway_sf)) +
-  labs(title = "Kriging Uncertainty – County Galway") +
   theme_bw()
 
 ```
 #### 
 
 # Next Project Steps
--Define outcome variables (e.g. enrolment size, accessibility, resource availability)
--Control for confounding factors (socioeconomic context, location, school size, demographics)
--Apply county-level kriging to examine spatial variation in school enrolment
--Extend analysis using regression or multivariable models to assess relationships between distance, travel mode, and    school characteristics
+- Define outcome variables (e.g. enrolment size, accessibility, resource availability)
+- Control for confounding factors (socioeconomic context, location, school size, demographics)
+- Apply county-level kriging to examine spatial variation in school enrolment
+- Extend analysis using regression or multivariable models to assess relationships between distance, travel mode, and    school characteristics
 
 # GitHub
 This project can be viewed at our GitHub repository here: <https://github.com/judithbeltranlopez/Final-Project>
