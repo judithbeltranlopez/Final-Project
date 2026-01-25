@@ -261,8 +261,7 @@ v <- variogram(log_enrol ~ 1, data = schools_agg, width = 5000, cutoff = 60000)
 v_init <- vgm(psill = 0.8, model = "Exp", range = 30000, nugget = 0.1)
 fv <- fit.variogram(v, v_init)
 
-sink(tempfile())
-kriged_sp <- suppressMessages(krige(
+kriged_sp <- invisible(suppressMessages(krige(
   formula   = log_enrol ~ 1,
   locations = schools_agg,
   newdata   = grid_sp,
@@ -270,7 +269,7 @@ kriged_sp <- suppressMessages(krige(
   nmax      = 100,   
   nmin      = 1,     
   maxdist   = 1e6    
-))
+)))
 
 kriged_sp$enrol_pred <- exp(kriged_sp$var1.pred)
 kriged_sp$sd_log     <- sqrt(kriged_sp$var1.var)
