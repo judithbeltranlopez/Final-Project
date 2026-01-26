@@ -430,7 +430,7 @@ ggplot(df_active_pct_town, aes(x = pct_active)) +
 
 
 ```
-```{r standard-plot5, out.width='95%', fig.align='center', fig.cap='Histogram of active transport in Ireland', fig.height=4,warning=FALSE,message=FALSE}
+```{r standard-plot6, out.width='95%', fig.align='center', fig.cap='Histogram of active transport in Ireland', fig.height=4,warning=FALSE,message=FALSE}
 library(stringr)
 
 
