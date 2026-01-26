@@ -167,7 +167,107 @@ leaflet(schools_sf) |>
 ```
 
 Kriging is a geostatistical interpolation technique that uses spatial relationships to estimate values at unsampled locations, helping to reveal spatial patterns and inequalities in school locations, travel behaviour, and related health impacts.
+```{r standard-plotireland, out.width='95%', fig.align='center', fig.cap='Kriging schools Ireland', fig.height=4,warning=FALSE,message=FALSE, results="hide"}
 
+library(readxl)
+library(dplyr)
+library(sf)
+library(sp)
+library(gstat)
+library(ggplot2)
+library(viridis)
+
+cell <- 5000  
+
+schools_df <- read_excel("../data/Data_on_Individual_Schools_Mainstream_2024_25.xlsx", sheet = 2) %>%
+  rename(
+    longitude = `School Longitude`,
+    latitude  = `School Latitude`
+  ) %>%
+  filter(!is.na(latitude), !is.na(longitude)) %>%
+  mutate(enrolment = suppressWarnings(as.numeric(`Enrolment per Return`))) %>%
+  filter(is.finite(enrolment), enrolment > 0) %>%
+  mutate(log_enrol = log(enrolment)) %>%
+  filter(is.finite(log_enrol))
+
+ireland_counties <- st_read("../data/gadm41_IRL_shp/gadm41_IRL_2.shp", quiet = TRUE)
+
+ireland_sf <- st_union(st_transform(ireland_counties, 2157)) %>%
+  st_as_sf() %>%
+  mutate(id = 1)
+
+schools_sf <- st_as_sf(schools_df, coords = c("longitude", "latitude"), crs = 4326, remove = FALSE) %>%
+  st_transform(2157)
+
+schools_irl_sf <- schools_sf[ireland_sf, ] %>%
+  filter(is.finite(log_enrol))
+
+schools_sp <- as(schools_irl_sf, "Spatial")
+
+df_sp <- as.data.frame(schools_sp)
+xy <- coordinates(schools_sp)
+df_sp$x <- xy[, 1]
+df_sp$y <- xy[, 2]
+
+schools_agg <- df_sp %>%
+  group_by(x, y) %>%
+  summarise(log_enrol = mean(log_enrol, na.rm = TRUE), .groups = "drop")
+
+coordinates(schools_agg) <- ~ x + y
+proj4string(schools_agg) <- proj4string(schools_sp)
+
+stopifnot(nrow(as.data.frame(schools_agg)) > 50)
+
+grid_polys <- st_make_grid(ireland_sf, cellsize = cell, what = "polygons")
+grid_polys <- st_sf(id = seq_along(grid_polys), geometry = grid_polys)
+
+grid_polys <- st_filter(grid_polys, ireland_sf, .predicate = st_intersects)
+stopifnot(nrow(grid_polys) > 0)
+
+grid_centroids_sf <- st_centroid(grid_polys)
+grid_centroids_sp <- as(grid_centroids_sf, "Spatial")
+
+v <- variogram(log_enrol ~ 1, data = schools_agg, width = cell, cutoff = 200000)  # 200 km
+
+fv <- fit.variogram(
+  v,
+  vgm(psill = 0.8, model = "Exp", range = 80000, nugget = 0.1)  # start range ~80 km
+)
+
+kriged_sp <- krige(
+  log_enrol ~ 1,
+  locations = schools_agg,
+  newdata   = grid_centroids_sp,
+  model     = fv,
+  nmax      = 150,
+  nmin      = 1,
+  maxdist   = 1e6
+)
+
+kriged_sp$enrol_pred <- exp(kriged_sp$var1.pred)
+
+kriged_centroids_sf <- st_as_sf(kriged_sp)
+
+grid_polys$enrol_pred <- kriged_centroids_sf$enrol_pred
+grid_polys$krig_var   <- kriged_centroids_sf$var1.var
+
+schools_sf_plot <- st_as_sf(schools_agg)
+
+ggplot() +
+  geom_sf(data = grid_polys, aes(fill = enrol_pred), color = NA) +
+  geom_sf(data = ireland_sf, fill = NA, color = "black", linewidth = 0.3) +
+  scale_fill_viridis_c(name = "Pred enrolment") +
+  coord_sf(crs = st_crs(ireland_sf)) +
+  labs(title = "Kriged Enrolment Surface – Ireland") +
+  theme_bw()+
+  theme(
+    panel.grid = element_blank(),
+    axis.title = element_blank(),
+    axis.text  = element_blank(),
+    axis.ticks = element_blank()
+  )
+
+```
 
 ```{r standard-plot3, out.width='95%', fig.align='center', fig.cap='Kriging schools in Co Galway', fig.height=4,warning=FALSE,message=FALSE, results="hide"}
 
@@ -263,16 +363,21 @@ grid_polys$krig_var   <- kriged_centroids_sf$var1.var
 
 schools_sf_plot <- st_as_sf(schools_agg)
 
-p1 <- ggplot() +
+ggplot() +
   geom_sf(data = grid_polys, aes(fill = enrol_pred), color = NA) +
   geom_sf(data = galway_sf, fill = NA, color = "black", linewidth = 0.4) +
   geom_sf(data = schools_sf_plot, color = "red", size = 0.6) +
   scale_fill_viridis_c(name = "Pred enrolment") +
   coord_sf(crs = st_crs(galway_sf)) +
   labs(title = "Kriged Enrolment Surface – County Galway") +
-  theme_bw()
+  theme_bw()+
+  theme(
+    panel.grid = element_blank(),
+    axis.title = element_blank(),
+    axis.text  = element_blank(),
+    axis.ticks = element_blank()
+  )
 
-print(p1)
 ```
 
 This plot shows how total active transport use (walking and cycling) is distributed across towns. A logarithmic scale is used to account for large differences in town size.
