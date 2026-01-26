@@ -301,39 +301,52 @@ ggplot() +
 This plot shows how total active transport use (walking and cycling) is distributed across towns. A logarithmic scale is used to account for large differences in town size.
 
 ```{r standard-plot5, out.width='95%', fig.align='center', fig.cap='Histogram of active transport in Ireland', fig.height=4,warning=FALSE,message=FALSE}
+library(dplyr)
+library(readr)
+library(janitor)
+library(ggplot2)
+library(scales)
+
 df <- read_csv("../data/SAP2022T11T1TOWN22.20251128T151123.csv") %>%
   clean_names()
 
 df_clean <- df %>%
   filter(means_of_travel != "Not stated")
 
-df_clean <- df_clean %>%
-  mutate(
-    health_group = if_else(
-      means_of_travel %in% c("On Foot", "Bicycle"),
-      "Active",
-      "Not active"
-    )
-  )
-
-df_active_town <- df_clean %>%
-  filter(means_of_travel %in% c("On Foot", "Bicycle")) %>%
+df_active_pct_town <- df_clean %>%
   group_by(towns_2022) %>%
-  summarise(total_active = sum(value), .groups = "drop")
+  summarise(
+    total_all_stated = sum(value, na.rm = TRUE),
+    total_active = sum(value[means_of_travel %in% c("On Foot", "Bicycle")], na.rm = TRUE),
+    pct_active = 100 * total_active / total_all_stated,
+    .groups = "drop"
+  ) %>%
+  filter(is.finite(pct_active))
 
-ggplot(df_active_town, aes(x = total_active)) +
+# constants to scale density onto "count" axis
+n_towns   <- nrow(df_active_pct_town)
+binwidth  <- diff(range(df_active_pct_town$pct_active, na.rm = TRUE)) / 30  # matches bins = 30
+
+ggplot(df_active_pct_town, aes(x = pct_active)) +
   geom_histogram(
     bins = 30,
     fill = "steelblue",
-    color = "white"
+    color = "white",
+    alpha = 0.7
   ) +
-  scale_x_log10() +
+  geom_density(
+    aes(y = after_stat(density) * n_towns * binwidth),
+    linewidth = 1
+  ) +
+  scale_x_continuous(labels = label_percent(scale = 1)) +
   labs(
-    title = "Distribution of Total Active Transport Users Across Towns",
-    x = "Total active-mode users (log scale)",
+    title = "Distribution of % Active Transport Users Across Towns",
+    x = "% active-mode users (On Foot + Bicycle)",
     y = "Number of towns"
   ) +
   theme_minimal()
+
+
 
 ```
 
