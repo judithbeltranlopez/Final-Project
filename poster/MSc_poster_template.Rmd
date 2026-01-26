@@ -179,19 +179,18 @@ library(gstat)
 library(ggplot2)
 library(viridis)
 
+cell <- 5000 
 schools_df <- read_excel("../data/Data_on_Individual_Schools_Mainstream_2024_25.xlsx", sheet = 2) %>%
   rename(
-    Roll_Number = `Roll Number`,
-    longitude   = `School Longitude`,
-    latitude    = `School Latitude`
+    longitude = `School Longitude`,
+    latitude  = `School Latitude`
   ) %>%
   filter(!is.na(latitude), !is.na(longitude)) %>%
-  mutate(
-    enrolment = suppressWarnings(as.numeric(`Enrolment per Return`))
-  ) %>%
-  filter(is.finite(enrolment), enrolment > 0) %>%     # avoid log(0) and NA
+  mutate(enrolment = suppressWarnings(as.numeric(`Enrolment per Return`))) %>%
+  filter(is.finite(enrolment), enrolment > 0) %>%
   mutate(log_enrol = log(enrolment)) %>%
   filter(is.finite(log_enrol))
+
 
 ireland_counties <- st_read("../data/gadm41_IRL_shp/gadm41_IRL_2.shp", quiet = TRUE)
 
@@ -199,36 +198,20 @@ galway_sf <- ireland_counties %>%
   filter(NAME_1 == "Galway") %>%
   st_transform(2157)
 
-schools_sf <- st_as_sf(
-  schools_df,
-  coords = c("longitude", "latitude"),
-  crs = 4326,
-  remove = FALSE
-) %>%
+
+schools_sf <- st_as_sf(schools_df, coords = c("longitude", "latitude"), crs = 4326, remove = FALSE) %>%
   st_transform(2157)
 
 schools_galway_sf <- schools_sf[galway_sf, ] %>%
   filter(is.finite(log_enrol))
 
+
 schools_sp <- as(schools_galway_sf, "Spatial")
-
-
-
-grid_centers <- st_make_grid(galway_sf, cellsize = 5000, what = "centers")
-grid_sf <- st_sf(grid_id = seq_along(grid_centers), geometry = grid_centers)
-grid_sf <- grid_sf[galway_sf, ]
-grid_sp <- as(grid_sf, "Spatial")
-
-stopifnot(length(grid_sp) > 0)
-
 
 df_sp <- as.data.frame(schools_sp)
 xy <- coordinates(schools_sp)
 df_sp$x <- xy[, 1]
 df_sp$y <- xy[, 2]
-
-dup_n <- sum(duplicated(df_sp[, c("x", "y")]))
-
 
 schools_agg <- df_sp %>%
   group_by(x, y) %>%
@@ -239,63 +222,57 @@ proj4string(schools_agg) <- proj4string(schools_sp)
 
 stopifnot(nrow(as.data.frame(schools_agg)) > 10)
 
+grid_polys <- st_make_grid(galway_sf, cellsize = cell, what = "polygons")
+grid_polys <- st_sf(id = seq_along(grid_polys), geometry = grid_polys)
 
-v <- variogram(log_enrol ~ 1, data = schools_agg, width = 5000, cutoff = 60000)
-
-v_init <- vgm(psill = 0.8, model = "Exp", range = 30000, nugget = 0.1)
-fv <- fit.variogram(v, v_init)
-
-#delete message
-tf <- tempfile()
-sink(tf)
-on.exit(sink(), add = TRUE)
-
-kriged_sp <- invisible(suppressMessages(krige(
-  formula   = log_enrol ~ 1,
-  locations = schools_agg,
-  newdata   = grid_sp,
-  model     = fv,
-  nmax      = 100,   
-  nmin      = 1,     
-  maxdist   = 1e6    
-)))
-
-kriged_sp$enrol_pred <- exp(kriged_sp$var1.pred)
-kriged_sp$sd_log     <- sqrt(kriged_sp$var1.var)
+grid_polys <- st_filter(grid_polys, galway_sf, .predicate = st_intersects)
 
 
 
-kriged_sf <- st_as_sf(kriged_sp)
-schools_sf_plot <- st_as_sf(schools_agg)
+stopifnot(nrow(grid_polys) > 0)
 
 
+grid_centroids_sf <- st_centroid(grid_polys)
+grid_centroids_sp <- as(grid_centroids_sf, "Spatial")
 
-coords <- st_coordinates(kriged_sf)
+v <- variogram(log_enrol ~ 1, data = schools_agg, width = cell, cutoff = 60000)
 
-kriged_df <- cbind(
-  as.data.frame(kriged_sf),
-  x = coords[,1],
-  y = coords[,2]
+fv <- fit.variogram(
+  v,
+  vgm(psill = 0.8, model = "Exp", range = 30000, nugget = 0.1)
 )
 
-ggplot() +
-  geom_tile(
-    data = kriged_df,
-    aes(x = x, y = y, fill = enrol_pred),
-    width = 5000,
-    height = 5000
-  ) +
+kriged_sp <- krige(
+  log_enrol ~ 1,
+  locations = schools_agg,
+  newdata   = grid_centroids_sp,
+  model     = fv,
+  nmax      = 100,
+  nmin      = 1,
+  maxdist   = 1e6
+)
+
+kriged_sp$enrol_pred <- exp(kriged_sp$var1.pred)
+
+kriged_centroids_sf <- st_as_sf(kriged_sp)
+
+
+
+grid_polys$enrol_pred <- kriged_centroids_sf$enrol_pred
+grid_polys$krig_var   <- kriged_centroids_sf$var1.var
+
+schools_sf_plot <- st_as_sf(schools_agg)
+
+p1 <- ggplot() +
+  geom_sf(data = grid_polys, aes(fill = enrol_pred), color = NA) +
   geom_sf(data = galway_sf, fill = NA, color = "black", linewidth = 0.4) +
   geom_sf(data = schools_sf_plot, color = "red", size = 0.6) +
   scale_fill_viridis_c(name = "Pred enrolment") +
-  coord_sf(crs = st_crs(galway_sf)) + theme_bw() +
-  theme(
-    panel.grid = element_blank(),
-    axis.title = element_blank(),
-    axis.text  = element_blank(),
-    axis.ticks = element_blank()
-  )
+  coord_sf(crs = st_crs(galway_sf)) +
+  labs(title = "Kriged Enrolment Surface – County Galway") +
+  theme_bw()
 
+print(p1)
 ```
 
 This plot shows how total active transport use (walking and cycling) is distributed across towns. A logarithmic scale is used to account for large differences in town size.
@@ -323,9 +300,8 @@ df_active_pct_town <- df_clean %>%
   ) %>%
   filter(is.finite(pct_active))
 
-# constants to scale density onto "count" axis
 n_towns   <- nrow(df_active_pct_town)
-binwidth  <- diff(range(df_active_pct_town$pct_active, na.rm = TRUE)) / 30  # matches bins = 30
+binwidth  <- diff(range(df_active_pct_town$pct_active, na.rm = TRUE)) / 30  
 
 ggplot(df_active_pct_town, aes(x = pct_active)) +
   geom_histogram(
@@ -349,7 +325,44 @@ ggplot(df_active_pct_town, aes(x = pct_active)) +
 
 
 ```
+```{r standard-plot5, out.width='95%', fig.align='center', fig.cap='Histogram of active transport in Ireland', fig.height=4,warning=FALSE,message=FALSE}
+library(stringr)
 
+
+df_active_pct_town <- df_active_pct_town %>%
+  mutate(
+    geogdesc = str_trim(str_extract(towns_2022, "^[^,]+"))
+  )
+
+                                                 
+translation_desc_id <- read_csv("../data/SAPS_2022_BUA_270923.csv") %>%
+  clean_names()%>%select("geogid","geogdesc")%>%distinct()
+
+df_active_pct_town_with_id <- df_active_pct_town%>% inner_join(translation_desc_id, by="geogdesc")
+
+urb_rural_df <- read_csv("../data/SAPS_2022_Small_Area_UR_171024.csv")%>%mutate(
+    category = str_extract(UR_Category_Desc, "(?<=\\.).*"))%>%select("GEOGID","category")%>%distinct()%>%  mutate(
+    urban_rural = case_when(
+      category %in% c(
+        " Cities",
+        " Satellite Urban Towns",
+        " Independent urban towns"
+      ) ~ "Urban",
+      
+      category %in% c(
+        " Rural areas with high urban influence",
+        " Rural areas with moderate urban influence",
+        " Highly rural/remote areas"
+      ) ~ "Rural",
+      
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  rename(geogid = GEOGID)
+
+# not working /!\ issue with the geogid column
+df_active_pct_town_with_id_join <- df_active_pct_town_with_id%>% inner_join(urb_rural_df, by="geogid")
+```
 #### 
 
 # Next Project Steps
