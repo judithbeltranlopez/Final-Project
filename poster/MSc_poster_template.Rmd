@@ -17,7 +17,7 @@ primary_colour:	"#a80050"	# Secondary colour use for poster design.
 secondary_colour:	"#84003d"	# Main colour used for poster design.
 accent_colour:	"#e6007e"	# A third colour option.
 author_textcol: "white"
-title_textsize: "90pt"
+title_textsize: "85pt"
 author_textsize: "60pt"
 body_textsize: "25pt"
 output: 
@@ -79,7 +79,7 @@ library(sf)
 library(scales)
 ```
 
-# Background and Problem
+# Background 
 - Daily travel to school significantly influences physical activity levels in children and adolescents  
 - Increased use of unhealthy transport has reduced walking and cycling  
 - Active travel provides important opportunities for regular physical activity  
@@ -87,14 +87,14 @@ library(scales)
 - Travel habits formed in childhood often continue into adulthood  
 
 
-# Objectives of Project
+# Objectives 
 
 1.  Map and analyse the spatial distribution of schools across Ireland.
 2.  Examine the distance between students’ residential locations and their schools, and investigate student mobility related to school attendance.
 3.  Analyse school travel behaviour and assess the prevalence of healthy versus less healthy commuting modes.
 4. Explore the relationship between school proximity, travel mode, and potential health implications.
 
-# Data Sources and Datasets
+# Datasets
 Data on schools in Ireland are of the following Types:
 
 - School-Level Data (Department of Education): School type, enrolment, and geographic location (Eircode,latitude,       longitude).
@@ -288,28 +288,16 @@ ggplot() +
   geom_sf(data = galway_sf, fill = NA, color = "black", linewidth = 0.4) +
   geom_sf(data = schools_sf_plot, color = "red", size = 0.6) +
   scale_fill_viridis_c(name = "Pred enrolment") +
-  coord_sf(crs = st_crs(galway_sf)) +
-  theme_bw()
+  coord_sf(crs = st_crs(galway_sf)) + theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    axis.title = element_blank(),
+    axis.text  = element_blank(),
+    axis.ticks = element_blank()
+  )
 
 ```
 
-
-```{r standard-plot4, out.width='95%', fig.align='center', fig.cap='Kriging schools in Co Galway', fig.height=4,warning=FALSE,message=FALSE}
-
-ggplot() +
-  geom_tile(
-    data = kriged_df,
-    aes(x = x, y = y, fill = var1.var),
-    width = 5000,
-    height = 5000
-  ) +
-  geom_sf(data = galway_sf, fill = NA, color = "black", linewidth = 0.4) +
-  geom_sf(data = schools_sf_plot, color = "red", size = 0.6) +
-  scale_fill_viridis_c(name = "Kriging variance", trans = "log") +
-  coord_sf(crs = st_crs(galway_sf)) +
-  theme_bw()
-
-```
 This plot shows how total active transport use (walking and cycling) is distributed across towns. A logarithmic scale is used to account for large differences in town size.
 
 ```{r standard-plot5, out.width='95%', fig.align='center', fig.cap='Histogram of active transport in Ireland', fig.height=4,warning=FALSE,message=FALSE}
@@ -352,7 +340,7 @@ ggplot(df_active_town, aes(x = total_active)) +
 #### 
 
 # Next Project Steps
-- Define outcome variables (e.g. enrolment size, accessibility, resource availability)
+- Define predictor variables (e.g. enrolment size, accessibility, resource availability)
 - Control for confounding factors (socioeconomic context, location, school size, demographics)
 - Apply county-level kriging to examine spatial variation in school enrolment
 - Extend analysis using regression or multivariable models to assess relationships between distance, travel mode, and    school characteristics
