@@ -76,7 +76,14 @@ library(leaflet)
 library(htmltools)
 library(janitor)
 library(sf)
+library(sp)
+library(gstat)
+library(ggplot2)
+library(viridis)
+library(readxl)
+library(dplyr)
 library(scales)
+library(readr)
 ```
 
 # Background 
@@ -109,12 +116,6 @@ Data on schools in Ireland are of the following Types:
 # Early Results 
 
 ```{r live-map, out.width='95%', fig.height=5, message=FALSE, warning=FALSE, fig.cap='Spatial distribution of schools across Ireland'}
-library(tidyverse)
-library(janitor)
-library(sf)
-library(leaflet)
-library(scales)
-
 schools_df <- readr::read_csv("../data/School_Data_Eircode_2024_2025.csv",
   locale = readr::locale(encoding = "Latin1"),
   show_col_types = FALSE
@@ -187,14 +188,6 @@ leaflet(
 ```
 Kriging is a geostatistical interpolation technique that uses spatial relationships to estimate values at unsampled locations, helping to reveal spatial patterns and inequalities in school locations, travel behaviour, and related health impacts.
 ```{r standard-plotireland, out.width='95%', fig.align='center', fig.cap='Kriging schools Ireland', fig.height=4,warning=FALSE,message=FALSE, results="hide"}
-
-library(readxl)
-library(dplyr)
-library(sf)
-library(sp)
-library(gstat)
-library(ggplot2)
-library(viridis)
 
 cell <- 5000  
 
@@ -289,14 +282,6 @@ ggplot() +
 ```
 
 ```{r standard-plot3, out.width='95%', fig.align='center', fig.cap='Kriging schools in Co Galway', fig.height=4,warning=FALSE,message=FALSE, results="hide"}
-
-library(readxl)
-library(dplyr)
-library(sf)
-library(sp)
-library(gstat)
-library(ggplot2)
-library(viridis)
 
 cell <- 5000 
 schools_df <- read_excel("../data/Data_on_Individual_Schools_Mainstream_2024_25.xlsx", sheet = 2) %>%
@@ -401,12 +386,6 @@ ggplot() +
 
 
 ```{r standard-plot5, out.width='95%', fig.align='center', fig.cap='Histogram of active transport in Ireland', fig.height=4,warning=FALSE,message=FALSE}
-library(dplyr)
-library(readr)
-library(janitor)
-library(ggplot2)
-library(scales)
-
 urb_rural_df <- read_csv("../data/SAPS_2022_Small_Area_UR_171024.csv")%>%mutate(
     category = str_extract(UR_Category_Desc, "(?<=\\.).*"))%>%select("GEOGID","category", "T11_1_FSCCC","T11_1_BISCCC","T11_1_TSCCC","T11_1_NSSCCC","T11_1_WMFHSCCC")%>%distinct()%>%  mutate(
     urban_rural = case_when(
@@ -455,8 +434,6 @@ ggplot(urb_rural_df, aes(x = perc_active)) +
     title = "Distribution of Active Transport to School/College/Childcare"
   ) +
   theme_minimal()
-
-
 
 ```
 ```{r standard-plot6, out.width='95%', fig.align='center', fig.cap='Histogram of active transport in Ireland splitted in Rural and Urban places', fig.height=4,fig.asp=0.9, warning=FALSE,message=FALSE}
