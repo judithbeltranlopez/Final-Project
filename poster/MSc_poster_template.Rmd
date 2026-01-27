@@ -187,7 +187,7 @@ leaflet(
 
 ```
 Kriging is a geostatistical interpolation technique that uses spatial relationships to estimate values at unsampled locations, helping to reveal spatial patterns and inequalities in school locations, travel behaviour, and related health impacts.
-```{r standard-plotireland, out.width='95%', fig.align='center', fig.cap='Kriging schools Ireland', fig.height=4,warning=FALSE,message=FALSE, results="hide"}
+```{r standard-plotireland, out.width='95%', fig.align='center', fig.cap='Kriging schools Ireland',fig.height=5,warning=FALSE,message=FALSE, results="hide"}
 
 cell <- 5000  
 
