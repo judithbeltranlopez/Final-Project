@@ -1,5 +1,5 @@
 ---
-title: "Distance,Mobility,and Mode Choice:A Spatial Analysis of School Travel Behaviour in Ireland"
+title: "Distance, Mobility, and Mode Choice: A Spatial Analysis of School Travel Behaviour in Ireland"
 author:
   - name: Judith Beltrán López
   - name: Sananthaa Jagadesan Senthamaraikannan
@@ -107,8 +107,6 @@ Data on schools in Ireland are of the following Types:
 <!--####-->
 
 # Early Results 
-
-The analysis began with an exploratory examination of the spatial distribution of schools across Ireland using maps and density plots. This helped validate the dataset, reveal spatial patterns, and highlight regional differences in school availability. The results show a clear urban–rural divide, with Dublin emerging as the main concentration of schools, suggesting shorter travel distances and greater potential for active transport, while rural areas are more likely to depend on motorised transport due to longer distances.
 
 ```{r live-map, out.width='95%', fig.height=5, message=FALSE, warning=FALSE, fig.cap='Spatial distribution of schools across Ireland'}
 library(tidyverse)
@@ -401,7 +399,6 @@ ggplot() +
 
 ```
 
-This plot shows how total active transport use (walking and cycling) is distributed across towns. A logarithmic scale is used to account for large differences in town size.
 
 ```{r standard-plot5, out.width='95%', fig.align='center', fig.cap='Histogram of active transport in Ireland', fig.height=4,warning=FALSE,message=FALSE}
 library(dplyr)
@@ -410,64 +407,8 @@ library(janitor)
 library(ggplot2)
 library(scales)
 
-df <- read_csv("../data/SAP2022T11T1TOWN22.20251128T151123.csv") %>%
-  clean_names()
-
-df_clean <- df %>%
-  filter(means_of_travel != "Not stated")
-
-df_active_pct_town <- df_clean %>%
-  group_by(towns_2022) %>%
-  summarise(
-    total_all_stated = sum(value, na.rm = TRUE),
-    total_active = sum(value[means_of_travel %in% c("On Foot", "Bicycle")], na.rm = TRUE),
-    pct_active = 100 * total_active / total_all_stated,
-    .groups = "drop"
-  ) %>%
-  filter(is.finite(pct_active))
-
-n_towns   <- nrow(df_active_pct_town)
-binwidth  <- diff(range(df_active_pct_town$pct_active, na.rm = TRUE)) / 30  
-
-ggplot(df_active_pct_town, aes(x = pct_active)) +
-  geom_histogram(
-    bins = 30,
-    fill = "steelblue",
-    color = "white",
-    alpha = 0.7
-  ) +
-  geom_density(
-    aes(y = after_stat(density) * n_towns * binwidth),
-    linewidth = 1
-  ) +
-  scale_x_continuous(labels = label_percent(scale = 1)) +
-  labs(
-    title = "Distribution of % Active Transport Users Across Towns",
-    x = "% active-mode users (On Foot + Bicycle)",
-    y = "Number of towns"
-  ) +
-  theme_minimal()
-
-
-
-```
-```{r standard-plot6, out.width='95%', fig.align='center', fig.cap='Histogram of active transport in Ireland', fig.height=4,warning=FALSE,message=FALSE}
-library(stringr)
-
-
-df_active_pct_town <- df_active_pct_town %>%
-  mutate(
-    geogdesc = str_trim(str_extract(towns_2022, "^[^,]+"))
-  )
-
-                                                 
-translation_desc_id <- read_csv("../data/SAPS_2022_BUA_270923.csv") %>%
-  clean_names()%>%select("geogid","geogdesc")%>%distinct()
-
-df_active_pct_town_with_id <- df_active_pct_town%>% inner_join(translation_desc_id, by="geogdesc")
-
 urb_rural_df <- read_csv("../data/SAPS_2022_Small_Area_UR_171024.csv")%>%mutate(
-    category = str_extract(UR_Category_Desc, "(?<=\\.).*"))%>%select("GEOGID","category")%>%distinct()%>%  mutate(
+    category = str_extract(UR_Category_Desc, "(?<=\\.).*"))%>%select("GEOGID","category", "T11_1_FSCCC","T11_1_BISCCC","T11_1_TSCCC","T11_1_NSSCCC","T11_1_WMFHSCCC")%>%distinct()%>%  mutate(
     urban_rural = case_when(
       category %in% c(
         " Cities",
@@ -484,10 +425,73 @@ urb_rural_df <- read_csv("../data/SAPS_2022_Small_Area_UR_171024.csv")%>%mutate(
       TRUE ~ NA_character_
     )
   ) %>%
-  rename(geogid = GEOGID)
+  rename(geogid = GEOGID)%>%
+  mutate(
+    denom = T11_1_TSCCC - T11_1_WMFHSCCC - T11_1_NSSCCC,
+    perc_active = ifelse(
+      denom > 0,
+      100 * (T11_1_FSCCC + T11_1_BISCCC) / denom,
+      NA_real_
+    )
+  )
 
-# not working /!\ issue with the geogid column
-df_active_pct_town_with_id_join <- df_active_pct_town_with_id%>% inner_join(urb_rural_df, by="geogid")
+binwidth <-  5
+
+ggplot(urb_rural_df, aes(x = perc_active)) +
+  geom_histogram(
+    aes(y = after_stat(count)),
+    binwidth = binwidth,
+    boundary = 0,
+    closed = "left",
+    alpha = 0.6
+  ) +
+  geom_density(
+    aes(y = after_stat(density * nrow(urb_rural_df) * 5)),
+    linewidth = 1
+  ) +
+  labs(
+    x = "Percentage using active transport (walking + cycling)",
+    y = "Number of areas",
+    title = "Distribution of Active Transport to School/College/Childcare"
+  ) +
+  theme_minimal()
+
+
+
+```
+```{r standard-plot6, out.width='95%', fig.align='center', fig.cap='Histogram of active transport in Ireland splitted in Rural and Urban places', fig.height=4,fig.asp=0.9, warning=FALSE,message=FALSE}
+
+plot_df <- urb_rural_df %>%
+  filter(
+    !is.na(perc_active),
+    perc_active >= 0,
+    perc_active <= 100,
+    !is.na(urban_rural)
+  )
+
+ggplot(plot_df, aes(x = perc_active)) +
+  geom_histogram(
+    aes(y = after_stat(density)),
+    binwidth = 5,
+    boundary = 0,
+    closed = "left",
+    alpha = 0.5
+  ) +
+  geom_density(
+    aes(color = category),
+    trim = TRUE,
+    linewidth = 1,
+    na.rm = TRUE
+  ) +
+  facet_wrap(~ urban_rural, nrow = 2) +
+  labs(
+    x = "Percentage using active transport (walking + cycling)",
+    y = "Density",
+    title = "Active Transport Distribution by Urban/Rural",
+    color = "Category"
+  ) +
+  theme_minimal()
+
 ```
 #### 
 
