@@ -17,8 +17,8 @@ primary_colour:	"#a80050"	# Secondary colour use for poster design.
 secondary_colour:	"#84003d"	# Main colour used for poster design.
 accent_colour:	"#e6007e"	# A third colour option.
 author_textcol: "white"
-title_textsize: "85pt"
-author_textsize: "60pt"
+title_textsize: "70pt"
+author_textsize: "45pt"
 body_textsize: "25pt"
 output: 
   posterdown::posterdown_html:
@@ -504,7 +504,7 @@ This project can be viewed at our GitHub repository here: <https://github.com/ju
 
 <div class="bib">
 
-Data
+Data:
 
 - Department of Education (Ireland). *Data on Individual Schools*.  
   https://www.gov.ie/en/department-of-education/collections/data-on-individual-schools/
@@ -517,7 +517,7 @@ Data
 - Central Statistics Office (CSO). *Census 2022 Small Area Population Statistics*.  
   https://www.cso.ie/en/census/census2022/census2022smallareapopulationstatistics/
 
-Research Context
+Research Context:
 
 - Why are teens half as likely to walk or cycle to school in Dublin as Dunshaughlin?
   https://www.rte.ie/brainstorm/2024/0209/1415046-teens-schools-ireland-active-transport-cycling-walking-educational-provision/
