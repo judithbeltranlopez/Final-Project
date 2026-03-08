@@ -1,0 +1,359 @@
+---
+title: "Krigging_schools"
+output: html_document
+---
+
+```{r}
+### import libraries
+library(tidyverse)
+library(plotly)
+library(kableExtra)
+library(leaflet)
+library(htmltools)
+library(janitor)
+library(sf)
+library(sp)
+library(gstat)
+library(ggplot2)
+library(viridis)
+library(readxl)
+library(dplyr)
+library(scales)
+library(readr)
+```
+
+```{r}
+### CLEAN DATA FOR THE KRIGGING ###
+prepare_school_kriging_data <- function(
+  excel_path,
+  sheet = 2,
+  shp_path,
+  region_name = NULL,          # NULL => area which you want to apply the krigging
+  region_field = "NAME_1",
+  cell = 5000,
+  target_epsg = 2157,
+  min_points = 10
+) {
+  stopifnot(file.exists(excel_path), file.exists(shp_path))
+
+  schools_df <- read_excel(excel_path, sheet = sheet) %>%
+    rename(
+      longitude = `School Longitude`,
+      latitude  = `School Latitude`
+    ) %>%
+    filter(!is.na(latitude), !is.na(longitude)) %>%
+    mutate(enrolment = suppressWarnings(as.numeric(`Enrolment per Return`))) %>%
+    filter(is.finite(enrolment), enrolment > 0) %>%
+    mutate(log_enrol = log(enrolment)) %>%
+    filter(is.finite(log_enrol))
+
+  ireland_counties <- sf::st_read(shp_path, quiet = TRUE)
+
+  if (is.null(region_name)) {
+    region_sf <- st_union(sf::st_transform(ireland_counties, target_epsg)) %>%
+      st_as_sf() %>%
+      mutate(id = 1)
+  } else {
+    region_sf <- ireland_counties %>%
+      filter(.data[[region_field]] == region_name) %>%
+      st_transform(target_epsg) %>%
+      st_union() %>%
+      st_as_sf() %>%
+      mutate(id = 1)
+  }
+
+  schools_sf <- st_as_sf(
+    schools_df,
+    coords = c("longitude", "latitude"),
+    crs = 4326,
+    remove = FALSE
+  ) %>%st_transform(target_epsg)
+
+  schools_region_sf <- schools_sf[region_sf, ] %>%filter(is.finite(log_enrol))
+
+  schools_sp <- as(schools_region_sf, "Spatial")
+
+  df_sp <- as.data.frame(schools_sp)
+  xy <- coordinates(schools_sp)
+  df_sp$x <- xy[, 1]
+  df_sp$y <- xy[, 2]
+
+  schools_agg_df <- df_sp %>%
+    group_by(x, y) %>%
+    summarise(log_enrol = mean(log_enrol, na.rm = TRUE), .groups = "drop")
+
+  coordinates(schools_agg_df) <- ~ x + y
+  proj4string(schools_agg_df) <- proj4string(schools_sp)
+
+  if (nrow(as.data.frame(schools_agg_df)) <= min_points) {
+    stop("Not enough points after filtering/aggregation. Increase area or lower min_points.")
+  }
+
+  grid_polys <- st_make_grid(region_sf, cellsize = cell, what = "polygons")
+  grid_polys <- st_sf(id = seq_along(grid_polys), geometry = grid_polys)
+  grid_polys <- st_filter(grid_polys, region_sf, .predicate = sf::st_intersects)
+
+  if (nrow(grid_polys) == 0) stop("Grid has 0 cells after intersecting region.")
+
+  grid_centroids_sf <- st_centroid(grid_polys)
+  grid_centroids_sp <- as(grid_centroids_sf, "Spatial")
+
+  list(
+    region_sf = region_sf,
+    schools_agg_sp = schools_agg_df,           
+    schools_agg_sf = st_as_sf(schools_agg_df),
+    grid_polys_sf = grid_polys,                
+    grid_centroids_sp = grid_centroids_sp     
+  )
+}
+
+
+## Kriging function ##
+run_enrolment_kriging <- function(
+  schools_agg_sp,
+  grid_centroids_sp,
+  grid_polys_sf = NULL,   
+  width,
+  cutoff,
+  vgm_start,
+  nmax = 100,
+  nmin = 1,
+  maxdist = 1e6
+) {
+  # Empirical variogram
+  v <- variogram(log_enrol ~ 1, data = schools_agg_sp, width = width, cutoff = cutoff)
+
+  # Fit model
+  fv <- fit.variogram(v, vgm_start)
+
+  # Ordinary kriging
+  kriged_sp <- krige(
+    log_enrol ~ 1,
+    locations = schools_agg_sp,
+    newdata   = grid_centroids_sp,
+    model     = fv,
+    nmax      = nmax,
+    nmin      = nmin,
+    maxdist   = maxdist
+  )
+
+  kriged_sp$enrol_pred <- exp(kriged_sp$var1.pred)
+  kriged_sf <- st_as_sf(kriged_sp)
+
+  if (!is.null(grid_polys_sf)) {
+    grid_out <- grid_polys_sf
+    grid_out$enrol_pred <- kriged_sf$enrol_pred
+    grid_out$krig_var   <- kriged_sf$var1.var
+  } else {
+    grid_out <- NULL
+  }
+
+  list(
+    variogram = v,
+    variogram_model = fv,
+    kriged_points_sf = kriged_sf,
+    grid_polys_sf = grid_out
+  )
+}
+```
+
+
+```{r}
+dat_irl <- prepare_school_kriging_data(
+  excel_path = "../data/Data_on_Individual_Schools_Mainstream_2024_25.xlsx",
+  sheet = 2,
+  shp_path = "../data/gadm41_IRL_shp/gadm41_IRL_2.shp",
+  region_name = NULL,
+  cell = 5000,
+  min_points = 50
+)
+
+res_irl <- run_enrolment_kriging(
+  schools_agg_sp     = dat_irl$schools_agg_sp,
+  grid_centroids_sp  = dat_irl$grid_centroids_sp,
+  grid_polys_sf      = dat_irl$grid_polys_sf,
+  width  = 5000,
+  cutoff = 200000,
+  vgm_start = gstat::vgm(psill = 0.8, model = "Exp", range = 80000, nugget = 0.1),
+  nmax = 150
+)
+
+res_irl
+```
+
+
+```{r}
+# 1) Read Small Areas (change path to your file)
+sa <- st_read("../data/Small_Area_National_Statistical_Boundaries_2022.geojson", quiet = TRUE)
+
+# 2) Choose an ID column if it exists; otherwise create one
+id_candidates <- c("GEOGID","SA_GUID","SAID","SA_ID","SMALL_AREA","OBJECTID","FID")
+sa_id <- id_candidates[id_candidates %in% names(sa)][1]
+
+if (is.na(sa_id)) {
+  sa <- sa %>% mutate(sa_uid = row_number())
+  sa_id <- "sa_uid"
+}
+
+# 3) Ensure same CRS as your kriging grid (yours is EPSG:2157) + valid geometry
+grid <- st_make_valid(res_irl$grid_polys_sf)
+sa   <- st_make_valid(st_transform(sa, st_crs(grid)))
+
+# 4) Keep only needed columns (faster)
+grid_keep <- grid %>% select(enrol_pred, krig_var)
+sa_keep   <- sa   %>% select(all_of(sa_id))
+
+# 5) Intersect + area-weighted mean per Small Area
+inter <- st_intersection(sa_keep, grid_keep) %>%
+  mutate(w = as.numeric(st_area(geometry)))  # area weights
+
+agg <- inter %>%
+  st_drop_geometry() %>%
+  group_by(.data[[sa_id]]) %>%
+  summarise(
+    krig_value = weighted.mean(enrol_pred, w = w, na.rm = TRUE),
+    krig_var   = weighted.mean(krig_var,   w = w, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# 6) Attach ONE value per Small Area
+sa_with_krig <- sa %>% left_join(agg, by = setNames(sa_id, sa_id))
+
+ggplot(sa_with_krig |> st_drop_geometry(), aes(x = krig_value)) +
+  geom_histogram(bins = 30) +
+  scale_x_log10() +
+  labs(
+    title = "Histogram of aggregated kriging values (Small Areas)",
+    x = "Kriging value (log10 scale)",
+    y = "Count of Small Areas"
+  ) +
+  theme_bw()
+```
+```{r}
+urb_rural_df <- read_csv("../data/SAPS_2022_Small_Area_UR_171024.csv")%>%mutate(
+    category = str_extract(UR_Category_Desc, "(?<=\\.).*"))%>%select("GEOGID","category")%>%distinct()%>%  mutate(
+    urban_rural = case_when(
+      category %in% c(
+        " Cities",
+        " Satellite Urban Towns",
+        " Independent urban towns"
+      ) ~ "Urban",
+      
+      category %in% c(
+        " Rural areas with high urban influence",
+        " Rural areas with moderate urban influence",
+        " Highly rural/remote areas"
+      ) ~ "Rural",
+      
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  rename(SA_PUB2022 = GEOGID)
+
+
+###JOIN:
+
+sa_with_krig <- sa_with_krig %>%
+  mutate(SA_PUB2022 = as.character(SA_PUB2022))
+
+urb_rural_df <- urb_rural_df %>%
+  mutate(SA_PUB2022 = as.character(SA_PUB2022))
+
+sa_with_krig_ur <- sa_with_krig %>%
+  left_join(urb_rural_df %>% select(SA_PUB2022, category, urban_rural),
+            by = "SA_PUB2022")
+```
+
+
+```{r}
+plot_df <- sa_with_krig_ur %>%
+  st_drop_geometry() %>%
+  filter(!is.na(urban_rural), is.finite(krig_value), krig_value > 0)
+
+ggplot(plot_df, aes(x = krig_value)) +
+  geom_histogram(bins = 30) +
+  scale_x_log10() +
+  facet_wrap(~ urban_rural, ncol = 1, scales = "free_y") +
+  labs(
+    title = "Histogram of aggregated kriging values (Small Areas) by Urban/Rural",
+    x = "Kriging value (log10 scale)",
+    y = "Count of Small Areas"
+  ) +
+  theme_bw()
+
+```
+
+```{r}
+age_df <- read_csv("../data/SAPS_2022_Small_Area_UR_171024.csv")%>%
+  rename(SA_PUB2022 = GEOGID)
+
+to_num <- function(x) {
+  if (is.numeric(x)) return(as.numeric(x))
+  readr::parse_number(as.character(x))
+}
+
+
+target_ages <- 3:18
+
+target_cols <- paste0("T1_1AGE", target_ages, "T")
+target_cols <- intersect(target_cols, names(age_df))
+stopifnot(length(target_cols) > 0)
+
+
+age_norm_target <- age_df %>%
+  mutate(across(all_of(target_cols), to_num)) %>%
+  mutate(across(
+    all_of(target_cols),
+    ~ {
+      denom <- sum(.x, na.rm = TRUE)     # column total across all Small Areas
+      if (is.na(denom) || denom == 0) NA_real_ else .x / denom
+    },
+    .names = "{.col}_share"
+  )) %>%
+  transmute(
+    SA_PUB2022,
+    # normalised target pop = sum of the normalised (share) columns
+    target_pop_norm = rowSums(across(ends_with("_share")), na.rm = TRUE)
+  )
+
+sa_full_norm <- sa_with_krig_ur %>%
+  mutate(SA_PUB2022 = str_trim(as.character(SA_PUB2022))) %>%
+  left_join(age_norm_target, by = "SA_PUB2022") %>%
+  st_transform(2157) %>%
+  mutate(
+    area_km2 = as.numeric(st_area(geometry)) / 1e6,
+    # density from kriging value (per km²)
+    places_density_km2 = krig_value / area_km2,
+    # NORMALISED by target_pop_norm
+    dens_norm = places_density_km2 / target_pop_norm,
+    dens_norm_per_1000 = 1000 * dens_norm
+  )
+```
+
+
+```{r}
+plot_df_norm <- sa_full_norm %>%
+  st_drop_geometry() %>%
+  filter(
+    !is.na(urban_rural),
+    is.finite(dens_norm_per_1000),
+    dens_norm_per_1000 > 0,
+    is.finite(target_pop_norm),
+    target_pop_norm > 0
+  )
+
+ggplot(plot_df_norm, aes(x = dens_norm_per_1000)) +
+  geom_histogram(bins = 30) +
+  scale_x_log10() +
+  facet_wrap(~ urban_rural, ncol = 1, scales = "free_y") +
+  labs(
+    title = paste0(
+      "School place density (kriging) normalised by target population (ages ",
+      min(target_ages), "–", max(target_ages), ")\n",
+      "Target population normalised by COLUMN totals"
+    ),
+    x = "Normalised density × 1000 (log10 scale)",
+    y = "Count of Small Areas"
+  ) +
+  theme_bw()
+```
