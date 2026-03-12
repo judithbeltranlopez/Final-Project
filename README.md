@@ -5,5 +5,7 @@ This project investigates the relationship between school place accessibility an
 
 **Authors**
 Judith Beltrán López — @judithbeltranlopez
+
 Sananthaa Jagadesan Senthamaraikannan — @Sananthaasenthamaraikannan
+
 MSc Health Data Science, University of Galway, 2025–2026
