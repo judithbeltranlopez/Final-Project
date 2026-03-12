@@ -357,3 +357,174 @@ ggplot(plot_df_norm, aes(x = dens_norm_per_1000)) +
   ) +
   theme_bw()
 ```
+
+```{r}
+###### calculate perc_active (Pi)
+saps <- read_csv("../data/SAPS_2022_Small_Area_UR_171024.csv") %>%
+  filter(T1_1AGETT <= 950) %>%
+  mutate(
+    SA_PUB2022 = as.character(GEOGID),
+    denom = T11_1_TSCCC - T11_1_WMFHSCCC - T11_1_NSSCCC,
+    perc_active = ifelse(denom > 0, 
+                         100 * (T11_1_FSCCC + T11_1_BISCCC) / denom, 
+                         NA_real_)
+  )
+```
+
+```{r}
+######Join
+scatter_df <- sa_full_norm %>%
+  st_drop_geometry() %>%
+  mutate(SA_PUB2022 = as.character(SA_PUB2022)) %>%
+  left_join(saps %>% select(SA_PUB2022, perc_active), by = "SA_PUB2022") %>%
+  filter(
+    !is.na(urban_rural),
+    !is.na(perc_active),
+    is.finite(krig_value), krig_value > 0,
+    is.finite(dens_norm_per_1000), dens_norm_per_1000 > 0
+  )
+```
+
+```{r}
+ggplot(scatter_df, aes(x = krig_value, y = perc_active, colour = urban_rural)) +
+  geom_point(alpha = 0.05) +
+  scale_x_log10(labels = scales::comma) +
+  scale_colour_manual(values = c("Urban" = "red", "Rural" = "blue")) +
+  labs(
+    title = "School place density vs Active travel",
+    x = "School place density",
+    y = "percentage of walking and cycling to education",
+    colour = "Area type"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+ggplot(scatter_df, aes(x = dens_norm_per_1000, y = perc_active, colour = urban_rural)) +
+  geom_point(alpha = 0.05) +
+  scale_x_log10(labels = scales::comma) +
+  scale_colour_manual(values = c("Urban" = "red", "Rural" = "blue")) +
+  labs(
+    title = "Normalised school place density vs Active travel",
+    x = "Normalised school place density",
+    y = "percentage of walking and cycling to education",
+    colour = "Area type"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+age_demo <- saps %>%
+  left_join(
+    sa_full_norm %>% st_drop_geometry() %>%
+      select(SA_PUB2022, urban_rural) %>%
+      mutate(SA_PUB2022 = as.character(SA_PUB2022)),
+    by = "SA_PUB2022"
+  ) %>%
+  mutate(
+    total_pop = T1_1AGETT,
+    pct_0_12  = 100 * rowSums(across(c(T1_1AGE0T, T1_1AGE1T, T1_1AGE2T,
+                                        T1_1AGE3T, T1_1AGE4T, T1_1AGE5T,
+                                        T1_1AGE6T, T1_1AGE7T, T1_1AGE8T,
+                                        T1_1AGE9T, T1_1AGE10T, T1_1AGE11T,
+                                        T1_1AGE12T))) / total_pop,
+    pct_13_21 = 100 * rowSums(across(c(T1_1AGE13T, T1_1AGE14T, T1_1AGE15T,
+                                        T1_1AGE16T, T1_1AGE17T, T1_1AGE18T,
+                                        T1_1AGE19T, T1_1AGE20_24T))) / total_pop,
+    pct_22_40 = 100 * rowSums(across(c(T1_1AGE25_29T, T1_1AGE30_34T,
+                                        T1_1AGE35_39T, T1_1AGE40_44T))) / total_pop,
+    pct_41_70 = 100 * rowSums(across(c(T1_1AGE45_49T, T1_1AGE50_54T,
+                                        T1_1AGE55_59T, T1_1AGE60_64T,
+                                        T1_1AGE65_69T, T1_1AGE70_74T))) / total_pop,
+    pct_71plus = 100 * rowSums(across(c(T1_1AGE75_79T, T1_1AGE80_84T,
+                                     T1_1AGEGE_85T))) / total_pop
+  ) %>%
+  filter(!is.na(urban_rural), total_pop > 0) %>%
+  pivot_longer(cols = c(pct_0_12, pct_13_21, pct_22_40,
+                        pct_41_70, pct_71plus),
+               names_to = "age_group",
+               values_to = "percentage") %>%
+  mutate(age_group = recode(age_group,
+    pct_0_12   = "0-12",
+    pct_13_21  = "13-21",
+    pct_22_40  = "22-40",
+    pct_41_70  = "41-70",
+    pct_71plus = "71+"
+  ))
+
+ggplot(age_demo, aes(x = percentage)) +
+  geom_histogram(bins = 30, boundary = 0, alpha = 0.7) +
+  facet_grid(urban_rural ~ age_group, scales = "free_y") +
+  labs(title = "Age profile distribution by Urban/Rural",
+       x = "% of population", y = "Count of Small Areas") +
+  theme_bw()
+```
+
+```{r}
+car_demo <- saps %>%
+  left_join(
+    sa_full_norm %>% st_drop_geometry() %>%
+      select(SA_PUB2022, urban_rural) %>%
+      mutate(SA_PUB2022 = as.character(SA_PUB2022)),
+    by = "SA_PUB2022"
+  ) %>%
+  mutate(
+    total_hh = T6_5_NCH + T6_5_OCH + T6_5_NGCH + T6_5_ECH + T6_5_CCH,
+    pct_0car  = 100 * T6_5_NCH / total_hh,
+    pct_1car  = 100 * T6_5_OCH / total_hh,
+    pct_2plus = 100 * (T6_5_NGCH + T6_5_ECH + T6_5_CCH) / total_hh
+  ) %>%
+  filter(!is.na(urban_rural), total_hh > 0) %>%
+  pivot_longer(cols = c(pct_0car, pct_1car, pct_2plus),
+               names_to = "car_category",
+               values_to = "percentage") %>%
+  mutate(car_category = recode(car_category,
+    pct_0car  = "No car",
+    pct_1car  = "1 car",
+    pct_2plus = "2+ cars"
+  ))
+
+ggplot(car_demo, aes(x = percentage)) +
+  geom_histogram(bins = 30, boundary = 0, alpha = 0.7) +
+  facet_grid(urban_rural ~ car_category, scales = "free_y") +
+  labs(title = "Car ownership distribution by Urban/Rural",
+       x = "% of households", y = "Count of Small Areas") +
+  theme_bw()
+```
+
+```{r}
+edu_demo <- saps %>%
+  left_join(
+    sa_full_norm %>% st_drop_geometry() %>%
+      select(SA_PUB2022, urban_rural) %>%
+      mutate(SA_PUB2022 = as.character(SA_PUB2022)),
+    by = "SA_PUB2022"
+  ) %>%
+  mutate(
+    total_edu = T10_4_TT,
+    pct_none_primary = 100 * (T10_4_NFT + T10_4_PT) / total_edu,
+    pct_secondary    = 100 * (T10_4_LST + T10_4_UST + T10_4_TVT) / total_edu,
+    pct_tertiary     = 100 * (T10_4_HCT + T10_4_HDPQT + T10_4_PDT + T10_4_DT) / total_edu,
+    pct_still_in_edu = 100 * T10_2_SAST / T1_1AGETT
+  ) %>%
+  filter(!is.na(urban_rural), total_edu > 0) %>%
+  pivot_longer(cols = c(pct_none_primary, pct_secondary,
+                        pct_tertiary, pct_still_in_edu),
+               names_to = "edu_category",
+               values_to = "percentage") %>%
+  mutate(edu_category = recode(edu_category,
+    pct_none_primary = "None/Primary",
+    pct_secondary    = "Secondary",
+    pct_tertiary     = "Tertiary",
+    pct_still_in_edu = "Still in education"
+  ))
+
+ggplot(edu_demo, aes(x = percentage)) +
+  geom_histogram(bins = 30, boundary = 0, alpha = 0.7) +
+  facet_grid(urban_rural ~ edu_category, scales = "free_y") +
+  labs(title = "Education profile distribution by Urban/Rural",
+       x = "% of population", y = "Count of Small Areas") +
+  theme_bw()
+```
+
+
