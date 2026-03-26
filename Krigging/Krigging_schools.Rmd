@@ -204,16 +204,16 @@ grid_keep <- grid %>% select(enrol_pred, krig_var)
 sa_keep   <- sa   %>% select(all_of(sa_id))
 
 # 5) Intersect + area-weighted mean per Small Area
-inter <- st_intersection(sa_keep, grid_keep) %>%
-  mutate(w = as.numeric(st_area(geometry)))  # area weights
+inter <- st_intersection(sa_keep, grid_keep) 
 
 agg <- inter %>%
   st_drop_geometry() %>%
   group_by(.data[[sa_id]]) %>%
   summarise(
-    krig_value = weighted.mean(enrol_pred, w = w, na.rm = TRUE),
-    krig_var   = weighted.mean(krig_var,   w = w, na.rm = TRUE),
-    .groups = "drop"
+    krig_value = mean(enrol_pred, na.rm = TRUE),
+    krig_var   = mean(krig_var, na.rm = TRUE),
+    .groups = "drop",
+    n = n()
   )
 
 # 6) Attach ONE value per Small Area
@@ -326,7 +326,7 @@ sa_full_norm <- sa_with_krig_ur %>%
     places_density_km2 = krig_value / area_km2,
     # NORMALISED by target_pop_norm
     dens_norm = places_density_km2 / target_pop_norm,
-    dens_norm_per_1000 = 1000 * dens_norm
+    dens_norm_per_100 = 100 * dens_norm
   )
 ```
 
@@ -336,13 +336,13 @@ plot_df_norm <- sa_full_norm %>%
   st_drop_geometry() %>%
   filter(
     !is.na(urban_rural),
-    is.finite(dens_norm_per_1000),
-    dens_norm_per_1000 > 0,
+    is.finite(dens_norm_per_100),
+    dens_norm_per_100 > 0,
     is.finite(target_pop_norm),
     target_pop_norm > 0
   )
 
-ggplot(plot_df_norm, aes(x = dens_norm_per_1000)) +
+ggplot(plot_df_norm, aes(x = dens_norm_per_100)) +
   geom_histogram(bins = 30) +
   scale_x_log10() +
   facet_wrap(~ urban_rural, ncol = 1, scales = "free_y") +
@@ -352,7 +352,7 @@ ggplot(plot_df_norm, aes(x = dens_norm_per_1000)) +
       min(target_ages), "–", max(target_ages), ")\n",
       "Target population normalised by COLUMN totals"
     ),
-    x = "Normalised density × 1000 (log10 scale)",
+    x = "Normalised density × 100 (log10 scale)",
     y = "Count of Small Areas"
   ) +
   theme_bw()
