@@ -184,7 +184,10 @@ res_irl
 
 ```{r}
 # 1) Read Small Areas (change path to your file)
-sa <- st_read("../data/Small_Area_National_Statistical_Boundaries_2022.geojson", quiet = TRUE)
+geojson_url <- "https://data-osi.opendata.arcgis.com/api/download/v1/items/9472cff586d74f2ba3c240d4344c5720/geojson?layers=0"
+#sa <- st_read("../data/Small_Area_National_Statistical_Boundaries_2022.geojson", quiet = TRUE) when local execute this line otherwise comment it.
+sa <- st_read(geojson_url, quiet = TRUE)
+
 
 # 2) Choose an ID column if it exists; otherwise create one
 id_candidates <- c("GEOGID","SA_GUID","SAID","SA_ID","SMALL_AREA","OBJECTID","FID")
