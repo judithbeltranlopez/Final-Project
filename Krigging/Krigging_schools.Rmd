@@ -384,7 +384,7 @@ scatter_df <- sa_full_norm %>%
     !is.na(urban_rural),
     !is.na(perc_active),
     is.finite(krig_value), krig_value > 0,
-    is.finite(dens_norm_per_1000), dens_norm_per_1000 > 0
+    is.finite(dens_norm_per_100), dens_norm_per_100 > 0
   )
 ```
 
@@ -403,7 +403,7 @@ ggplot(scatter_df, aes(x = krig_value, y = perc_active, colour = urban_rural)) +
 ```
 
 ```{r}
-ggplot(scatter_df, aes(x = dens_norm_per_1000, y = perc_active, colour = urban_rural)) +
+ggplot(scatter_df, aes(x = dens_norm_per_100, y = perc_active, colour = urban_rural)) +
   geom_point(alpha = 0.05) +
   scale_x_log10(labels = scales::comma) +
   scale_colour_manual(values = c("Urban" = "red", "Rural" = "blue")) +
