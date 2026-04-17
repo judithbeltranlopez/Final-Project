@@ -18,6 +18,7 @@ library(ggplot2)
 library(viridis)
 library(readxl)
 library(dplyr)
+library(stringr)
 library(scales)
 library(readr)
 ```
@@ -168,10 +169,29 @@ dat_irl <- prepare_school_kriging_data(
   min_points = 50
 )
 
+fine_cell <- 5000 / 3
+
+# finer grid (3x3 inside each original 5 km cell)
+grid_3x3 <- st_make_grid(
+  dat_irl$region_sf,
+  cellsize = fine_cell,
+  what = "polygons"
+) %>%
+  st_as_sf()
+
+# clip to the region so coastal cells are trimmed
+grid_3x3 <- suppressWarnings(st_intersection(grid_3x3, dat_irl$region_sf)) %>%
+  st_make_valid() %>%
+  mutate(grid_id = row_number())
+
+# use one point inside each small polygon for kriging prediction
+grid_3x3_pts_sf <- st_point_on_surface(grid_3x3)
+grid_3x3_pts_sp <- as(grid_3x3_pts_sf, "Spatial")
+
 res_irl <- run_enrolment_kriging(
   schools_agg_sp     = dat_irl$schools_agg_sp,
-  grid_centroids_sp  = dat_irl$grid_centroids_sp,
-  grid_polys_sf      = dat_irl$grid_polys_sf,
+  grid_centroids_sp  = grid_3x3_pts_sp,
+  grid_polys_sf      = grid_3x3,
   width  = 5000,
   cutoff = 200000,
   vgm_start = gstat::vgm(psill = 0.8, model = "Exp", range = 80000, nugget = 0.1),
