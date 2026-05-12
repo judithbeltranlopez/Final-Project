@@ -43,3 +43,32 @@ df_urban <- df_urban%>%
   ) %>%
   droplevels()
 ```
+
+```{r}
+
+# Calculate outcome scale for sensible priors
+y_mean <- mean(df_urban$krig_value, na.rm = TRUE)
+y_sd   <- sd(df_urban$krig_value, na.rm = TRUE)
+
+# Define priors
+priors <- c(
+  set_prior("normal(0, 50)", class = "b"),
+  set_prior(paste0("normal(", y_mean, ", ", 2 * y_sd, ")"), class = "Intercept"),
+  set_prior(paste0("exponential(", 1 / y_sd, ")"), class = "sigma"),
+  set_prior("exponential(0.02)", class = "sd"),
+  set_prior("gamma(2, 0.1)", class = "nu")
+)
+
+model_urban <- brm(
+  formula = krig_value ~ category + z_log_places_density + z_log_area +
+    z_target_pop_norm + (1 | county) + (1 | urban_area),
+  data = df_urban,
+  family = student(),
+  prior = priors,
+  chains = 4,
+  iter = 4000,
+  warmup = 1000,
+  seed = 123,
+  control = list(adapt_delta = 0.95, max_treedepth = 15)
+)
+```
