@@ -11,5 +11,35 @@ library(brms)
 ```
 
 ```{r}
-model_df <- sa_full_norm
+model_df <- sa_full_norm%>%
+  sf::st_drop_geometry()
+
+
+## Focus on URBAN DATA:
+df_urban <- model_df%>%filter(urban_rural%in%"Urban")
+
+# 1. Prepare data:
+
+df_urban <- df_urban%>%
+  mutate(
+    category = factor(category),
+    county = factor(COUNTY_ENGLISH),
+    urban_area = factor(SA_URBAN_AREA_NAME),
+    log_places_density = log1p(places_density_km2),
+    log_area = log1p(area_km2),
+    z_log_places_density = as.numeric(scale(log_places_density)),
+    z_log_area = as.numeric(scale(log_area)),
+    z_target_pop_norm = as.numeric(scale(target_pop_norm)),
+    krig_se = sqrt(krig_var)
+  ) %>%
+  filter(
+    !is.na(krig_value),
+    !is.na(category),
+    !is.na(z_log_places_density),
+    !is.na(z_log_area),
+    !is.na(z_target_pop_norm),
+    !is.na(county),
+    !is.na(urban_area)
+  ) %>%
+  droplevels()
 ```
