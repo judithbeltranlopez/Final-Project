@@ -2,4 +2,14 @@
 title: "model"
 output: html_document
 ---
+```{r}
+library(tidyverse)
+library(plotly)
+library(dplyr)
+library(ggplot2)
+library(brms)
+```
 
+```{r}
+model_df <- sa_full_norm
+```
