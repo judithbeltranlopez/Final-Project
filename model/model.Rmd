@@ -108,3 +108,61 @@ plot_predictions(
   re_formula = NA
 )
 ```
+
+```{r}
+# Repeat the same for rural areas:
+
+df_rural <- model_df%>%filter(urban_rural%in%"Rural")
+
+# 1. Prepare data:
+
+df_rural <- df_rural%>%
+  mutate(
+    category = factor(category),
+    county = factor(COUNTY_ENGLISH),
+    urban_area = factor(SA_URBAN_AREA_NAME),
+    log_places_density = log1p(places_density_km2),
+    log_area = log1p(area_km2),
+    z_log_places_density = as.numeric(scale(log_places_density)),
+    z_log_area = as.numeric(scale(log_area)),
+    z_target_pop_norm = as.numeric(scale(target_pop_norm)),
+    krig_se = sqrt(krig_var)
+  ) %>%
+  filter(
+    !is.na(krig_value),
+    !is.na(category),
+    !is.na(z_log_places_density),
+    !is.na(z_log_area),
+    !is.na(z_target_pop_norm),
+    !is.na(county),
+    !is.na(urban_area)
+  ) %>%
+  droplevels()
+
+
+# Calculate outcome scale for sensible priors
+y_mean_rural <- mean(df_rural$krig_value, na.rm = TRUE)
+y_sd_rural  <- sd(df_rural$krig_value, na.rm = TRUE)
+
+# Define priors
+priors_rural <- c(
+  set_prior("normal(0, 50)", class = "b"),
+  set_prior(paste0("normal(", y_mean_rural, ", ", 2 * y_sd, ")"), class = "Intercept"),
+  set_prior(paste0("exponential(", 1 / y_sd_rural, ")"), class = "sigma"),
+  set_prior("exponential(0.02)", class = "sd"),
+  set_prior("gamma(2, 0.1)", class = "nu")
+)
+
+model_urban <- brm(
+  formula = krig_value ~ category + z_log_places_density + z_log_area +
+    z_target_pop_norm + (1 | county) + (1 | urban_area),
+  data = df_rural,
+  family = student(),
+  prior = priors_rural,
+  chains = 4,
+  iter = 4000,
+  warmup = 1000,
+  seed = 123,
+  control = list(adapt_delta = 0.95, max_treedepth = 15)
+)
+```
