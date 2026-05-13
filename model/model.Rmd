@@ -8,6 +8,8 @@ library(plotly)
 library(dplyr)
 library(ggplot2)
 library(brms)
+library(marginaleffects)
+library(collapse)
 ```
 
 ```{r}
@@ -70,5 +72,39 @@ model_urban <- brm(
   warmup = 1000,
   seed = 123,
   control = list(adapt_delta = 0.95, max_treedepth = 15)
+)
+```
+```{r}
+# Evaluate model
+
+summary(model_urban)
+plot(model_urban)
+pp_check(model_urban)
+bayes_R2(model_urban)
+loo(model_urban)
+```
+
+```{r}
+## Marginal plots
+
+# 1. Main categorical plot
+plot_predictions(
+  model_urban,
+  condition = "category",
+  re_formula = NA
+)
+
+# 2. Main continuous predictor plot
+plot_predictions(
+  model_urban,
+  condition = "z_log_places_density",
+  re_formula = NA
+)
+
+# 3. Density by category
+plot_predictions(
+  model_urban,
+  condition = c("z_log_places_density", "category"),
+  re_formula = NA
 )
 ```
