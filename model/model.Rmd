@@ -153,7 +153,7 @@ priors_rural <- c(
   set_prior("gamma(2, 0.1)", class = "nu")
 )
 
-model_urban <- brm(
+model_rural <- brm(
   formula = krig_value ~ category + z_log_places_density + z_log_area +
     z_target_pop_norm + (1 | county) + (1 | urban_area),
   data = df_rural,
