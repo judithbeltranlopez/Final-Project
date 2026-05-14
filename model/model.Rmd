@@ -166,3 +166,36 @@ model_rural <- brm(
   control = list(adapt_delta = 0.95, max_treedepth = 15)
 )
 ```
+
+```{r}
+# Evaluate model
+
+summary(model_rural)
+plot(model_rural)
+pp_check(model_rural)
+bayes_R2(model_rural)
+loo(model_rural)
+
+
+# Marginal plots rural
+# 1. Main categorical plot
+plot_predictions(
+  model_rural,
+  condition = "category",
+  re_formula = NA
+)
+
+# 2. Main continuous predictor plot
+plot_predictions(
+  model_rural,
+  condition = "z_log_places_density",
+  re_formula = NA
+)
+
+# 3. Density by category
+plot_predictions(
+  model_rural,
+  condition = c("z_log_places_density", "category"),
+  re_formula = NA
+)
+```
