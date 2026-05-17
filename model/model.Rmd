@@ -61,9 +61,17 @@ priors <- c(
   set_prior("gamma(2, 0.1)", class = "nu")
 )
 
+# pre diagnostic of the priors --> further information
+# response variable -> the proportion of people walking, use krig_value as predictor as well/travel time (2 different models)
+# beta regression 
+# add demographic variables
+# log transformation to demographic variables
+# quarto
+
+
 model_urban <- brm(
-  formula = krig_value ~ category + z_log_places_density + z_log_area +
-    z_target_pop_norm + (1 | county) + (1 | urban_area),
+  formula = krig_value ~ category + z_log_places_density  
+     + (1 | county) + (1 | urban_area),
   data = df_urban,
   family = student(),
   prior = priors,
@@ -98,7 +106,7 @@ plot_predictions(
 plot_predictions(
   model_urban,
   condition = "z_log_places_density",
-  re_formula = NA
+  re_formula = NA # take notes 
 )
 
 # 3. Density by category
