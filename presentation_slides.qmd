@@ -1,0 +1,52 @@
+---
+title: "Distance, Mobility, and Mode Choice: A Spatial Analysis of School Travel Behaviour in Ireland"
+author:
+  - Judith Beltrán López
+  - Sananthaa Jagadesan Senthamaraikannan 
+format: 
+  revealjs:
+    theme: simple
+    slide-number: true
+    transition: slide
+editor: visual
+---
+
+## Background
+
+## Objectives
+
+## Datasets: School Data
+
+## Datasets: School Data
+
+## Datasets: Census
+
+## Datasets: Census
+
+## Kriging
+
+## Kriging
+
+## Travel time
+
+## Travel time
+
+## Final Dataset
+
+## Descriptive Results
+
+## Model
+
+## Model: Implementation
+
+## Model: Urban Results
+
+## Model: Rural Results
+
+## Model: Improvements
+
+## Next Steps
+
+## Conclusions
+
+## Thank you for your attention! {.center}
