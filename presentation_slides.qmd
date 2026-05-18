@@ -4,61 +4,71 @@ format:
     theme: simple
     slide-number: true
     transition: slide
+    include-in-header:
+      text: |
+        <style>
+        .reveal {
+          font-size: 35px;
+        }
+
+        .title-slide {
+          text-align: center;
+          padding: 45px;
+        }
+
+        .main-title {
+          font-size: 1.8em;
+          font-weight: 700;
+          color: #9f1f55;
+          line-height: 1.15;
+          margin-bottom: 30px;
+        }
+
+        .subtitle {
+          font-size: 0.95em;
+          color: #333333;
+          margin-bottom: 45px;
+        }
+
+        .authors {
+          font-size: 0.8em;
+          color: #222222;
+          line-height: 1.5;
+        }
+
+        .reveal h2 {
+          color: #9f1f55;
+        }
+
+        .reveal .mermaid {
+          font-size: 26px;
+        }
+        .model-flow {
+          width: 80%;
+          margin: 0 auto;
+          text-align: center;
+          font-weight: 700;
+          line-height: 1.4;
+        }
+        </style>
 execute:
-  echo: true
+  echo: false
   warning: false
   message: false
 ---
 
-```{=html}
-<style>
-.reveal {
-  font-size: 35px;
-}
+## {.title-slide}
 
-.title-slide {
-  text-align: center;
-  padding: 40px;
-}
-
-.main-title {
-  font-size: 1.8em;
-  font-weight: 700;
-  color: #9f1f55;
-  line-height: 1.15;
-  margin-bottom: 30px;
-}
-
-.subtitle {
-  font-size: 0.95em;
-  color: #333333;
-  margin-bottom: 45px;
-}
-
-.authors {
-  font-size: 0.8em;
-  color: #222222;
-  line-height: 1.5;
-}
-
-.reveal h2 {
-  color: #9f1f55;
-}
-</style>
-```
-
-##  {.title-slide}
-
-::: main-title
+::: {.main-title}
 Distance, Mobility, and Mode Choice
 :::
 
-::: subtitle
+::: {.subtitle}
 A Spatial Analysis of School Travel Behaviour in Ireland
 :::
 
-::: authors
-**Judith Beltrán López**\
+::: {.authors}
+**Judith Beltrán López**  
 **Sananthaa Jagadesan Senthamaraikannan**
 :::
 
@@ -66,46 +76,121 @@ A Spatial Analysis of School Travel Behaviour in Ireland
 
 School travel is not only a question of **individual choice** — it is also shaped by **distance, school location, and educational provision**.
 
--   Walking and cycling to school can improve health, learning, traffic congestion, and emissions.
--   In Ireland, low active travel is often explained as a need for “behaviour change”.
--   However, active travel does **not simply follow population density**.
--   Instead, it is linked to the spatial distribution of schools and inequalities in access.
+- Walking and cycling to school can improve health, learning, traffic congestion, and emissions.
+- In Ireland, low active travel is often explained as a need for “behaviour change”.
+- However, active travel does **not simply follow population density**.
+- Instead, it is linked to the spatial distribution of schools and inequalities in access.
 
-::: incremental
-
-**Research question:**\
-How do distance, travel time, and school location influence school travel mode choice in Ireland?
-:::
 
 ## Objectives
 
-::: incremental
-1.  Map and analyse the spatial distribution of schools across Ireland.
+::: {.incremental}
+1. Map and analyse the spatial distribution of schools across Ireland.
 
-2.  Examine the distance between students’ residential locations and their schools, and investigate student mobility related to school attendance.
+2. Examine the distance between students’ residential locations and their schools, and investigate student mobility related to school attendance.
 
-3.  Analyse school travel behaviour and assess the prevalence of healthy versus less healthy commuting modes.
+3. Analyse school travel behaviour and assess the prevalence of healthy versus less healthy commuting modes.
 
-4.  Explore the relationship between school proximity, travel mode, and potential health implications.
+4. Explore the relationship between school proximity, travel mode, and potential health implications.
 :::
 
 ## Datasets: School Data
 
+The school dataset comes from the **Irish Department of Education** and provides information for individual schools.
+
+::: {.incremental}
+- Includes data for **primary** and **post-primary** schools.
+- Contains information on **enrolment figures** by school.
+- Primary school data also includes **class size information**.
+- Post-primary data includes specific categories such as **fee-paying** and **boarding schools**.
+- This dataset helps describe the **spatial distribution and size of schools** across Ireland.
+:::
+
 ## Datasets: School Data
 
-## Datasets: Census
+PLOT
+
+## Datasets: Census Data
+
+The census dataset comes from the **Central Statistics Office (CSO)** and provides demographic and socio-economic information at small-area level.
+
+::: {.incremental}
+- Includes population characteristics such as **age, sex, households, and families**.
+- Provides socio-economic variables related to **education, social class, occupation, and commuting**.
+- Contains information on **housing, car availability, and internet access**.
+- Small-area data helps capture local demographic conditions around schools.
+- These variables are used to explain how local context may influence school travel behaviour.
+:::
 
 ## Datasets: Census
 
-## Kriging
+PLOTS
 
 ## Kriging
 
-## Travel time
+Kriging is a **spatial interpolation method** used to predict values at locations where we do not have observations.
+
+::: {.incremental}
+- It uses observed spatial data to estimate values at unsampled locations.
+- Predictions are based on **nearby observations** and their spatial correlation.
+- The spatial structure is described using a **variogram**.
+- Points closer to the prediction location usually receive more weight.
+- Kriging also provides a measure of **prediction uncertainty**.
+:::
+
+## Kriging
+
+```{r}
+```
+
+## Travel Time
+
+Travel time is used to measure **spatial accessibility**: how easily students can reach schools from their residential areas.
+
+::: {.incremental}
+- Travel times are calculated using a **routable transport network**.
+- The method can include different modes, such as **walking, cycling, public transport, or driving**.
+- Accessibility depends on the **origin**, the **destination**, and the available transport network.
+- Time thresholds can be used to identify which schools are reachable within a given number of minutes.
+- These measures help connect school location with students’ real mobility opportunities.
+:::
 
 ## Travel time
+
+PLOT
 
 ## Final Dataset
+
+::: {.center}
+
+```{mermaid}
+%%{init: {"theme": "base", "themeVariables": {
+  "primaryColor": "#f8eaf1",
+  "primaryTextColor": "#222222",
+  "primaryBorderColor": "#9f1f55",
+  "lineColor": "#9f1f55",
+  "fontSize": "26px"
+}}}%%
+
+flowchart LR
+    A["School databases<br/><small>School location and attributes</small>"]
+    B["Census<br/><small>Demographic variables</small>"]
+    C["Kriging<br/><small>Spatial interpolation</small>"]
+    D["Travel times<br/><small>Accessibility measure</small>"]
+    E["Final dataframe<br/><small>Modelling dataset</small>"]
+
+    A --> C
+    B --> C
+    C --> D
+    A --> E
+    B --> E
+    D --> E
+
+    classDef box fill:#f8eaf1,stroke:#9f1f55,stroke-width:4px,color:#222222,font-size:26px;
+    class A,B,C,D,E box;
+```
+
+:::
 
 ## Descriptive Results
 
@@ -113,18 +198,72 @@ Scatter plot between response variable and travel time / kriging.
 
 ## Model
 
+::: {.model-flow}
+**Proportion of students using a travel mode**  
+↓  
+**Beta distribution**  
+↓  
+**Explained by distance, travel time, accessibility,  
+and school context**
+:::
+
+::: {.incremental}
+- Designed for continuous proportions between **0 and 1**.
+- Uses a **logit link** to keep predicted values inside the valid range.
+- Estimates both the relationship between variables and the uncertainty around those relationships.
+- Well suited for comparing **urban and rural** school travel patterns.
+:::
+
 ## Model: Implementation
 
+```{r}
+#| echo: true
+#| eval: false
+
+model_urban_krig <- brm(
+  formula = formula_beta,
+  data = df_urban_model,
+  family = Beta(link = "logit"),
+  prior = priors,
+  chains = 4,
+  iter = 4000,
+  warmup = 1000,
+  seed = 123,
+  control = list(adapt_delta = 0.95)
+)
+```
+
+::: {.incremental}
+::: {.small-text}
+- The formula is built dynamically using the selected predictors.
+- Weakly informative priors regularise the model estimates.
+- The model is fitted separately for the **urban dataset**.
+- Four chains and 4000 iterations improve posterior estimation.
+- `adapt_delta = 0.95` helps reduce sampling problems.
+:::
+:::
 ## Model: Urban Results
+
+Content here.
 
 ## Model: Rural Results
 
+Content here.
+
 ## Model: Improvements
+
+Content here.
 
 ## Next Steps
 
+Content here.
+
 ## Conclusions
 
-##  {.center}
+Content here.
 
-# Thank you for your attention!
+## {.center}
+
+::: {.main-title}
+Thank you for your attention!
+:::

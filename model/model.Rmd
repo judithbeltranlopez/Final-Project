@@ -95,8 +95,6 @@ priors <- c(
   prior(exponential(1), class = "phi")
 )
 
-# pre-diagnostic of the priors:
-
 
 model_urban_krig <- brm(
   formula = formula_beta,
