@@ -1,15 +1,66 @@
 ---
-title: "Distance, Mobility, and Mode Choice: A Spatial Analysis of School Travel Behaviour in Ireland"
-author:
-  - Judith Beltrán López
-  - Sananthaa Jagadesan Senthamaraikannan 
-format: 
+format:
   revealjs:
     theme: simple
     slide-number: true
     transition: slide
-editor: visual
+execute:
+  echo: true
+  warning: false
+  message: false
 ---
+
+```{=html}
+<style>
+.reveal {
+  font-size: 35px;
+}
+
+.title-slide {
+  text-align: center;
+  padding: 40px;
+}
+
+.main-title {
+  font-size: 1.8em;
+  font-weight: 700;
+  color: #9f1f55;
+  line-height: 1.15;
+  margin-bottom: 30px;
+}
+
+.subtitle {
+  font-size: 0.95em;
+  color: #333333;
+  margin-bottom: 45px;
+}
+
+.authors {
+  font-size: 0.8em;
+  color: #222222;
+  line-height: 1.5;
+}
+
+.reveal h2 {
+  color: #9f1f55;
+}
+</style>
+```
+
+##  {.title-slide}
+
+::: main-title
+Distance, Mobility, and Mode Choice
+:::
+
+::: subtitle
+A Spatial Analysis of School Travel Behaviour in Ireland
+:::
+
+::: authors
+**Judith Beltrán López**\
+**Sananthaa Jagadesan Senthamaraikannan**
+:::
 
 ## Background
 
@@ -17,22 +68,25 @@ School travel is not only a question of **individual choice** — it is also sha
 
 -   Walking and cycling to school can improve health, learning, traffic congestion, and emissions.
 -   In Ireland, low active travel is often explained as a need for “behaviour change”.
--   However, recent research argues that active travel does **not simply follow population density**.
+-   However, active travel does **not simply follow population density**.
 -   Instead, it is linked to the spatial distribution of schools and inequalities in access.
+
+::: incremental
 
 **Research question:**\
 How do distance, travel time, and school location influence school travel mode choice in Ireland?
+:::
 
 ## Objectives
 
-::: {.incremental}\
-1. Map and analyse the spatial distribution of schools across Ireland.\
-\
-2. Examine the distance between students’ residential locations and their schools, and investigate student mobility related to school attendance.\
-\
-3. Analyse school travel behaviour and assess the prevalence of healthy versus less healthy commuting modes.\
-\
-4. Explore the relationship between school proximity, travel mode, and potential health implications.\
+::: incremental
+1.  Map and analyse the spatial distribution of schools across Ireland.
+
+2.  Examine the distance between students’ residential locations and their schools, and investigate student mobility related to school attendance.
+
+3.  Analyse school travel behaviour and assess the prevalence of healthy versus less healthy commuting modes.
+
+4.  Explore the relationship between school proximity, travel mode, and potential health implications.
 :::
 
 ## Datasets: School Data
@@ -55,6 +109,8 @@ How do distance, travel time, and school location influence school travel mode c
 
 ## Descriptive Results
 
+Scatter plot between response variable and travel time / kriging.
+
 ## Model
 
 ## Model: Implementation
@@ -69,4 +125,6 @@ How do distance, travel time, and school location influence school travel mode c
 
 ## Conclusions
 
-## Thank you for your attention! {.center}
+##  {.center}
+
+# Thank you for your attention!
