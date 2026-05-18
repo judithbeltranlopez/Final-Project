@@ -13,7 +13,27 @@ editor: visual
 
 ## Background
 
+School travel is not only a question of **individual choice** — it is also shaped by **distance, school location, and educational provision**.
+
+-   Walking and cycling to school can improve health, learning, traffic congestion, and emissions.
+-   In Ireland, low active travel is often explained as a need for “behaviour change”.
+-   However, recent research argues that active travel does **not simply follow population density**.
+-   Instead, it is linked to the spatial distribution of schools and inequalities in access.
+
+**Research question:**\
+How do distance, travel time, and school location influence school travel mode choice in Ireland?
+
 ## Objectives
+
+::: {.incremental}\
+1. Map and analyse the spatial distribution of schools across Ireland.\
+\
+2. Examine the distance between students’ residential locations and their schools, and investigate student mobility related to school attendance.\
+\
+3. Analyse school travel behaviour and assess the prevalence of healthy versus less healthy commuting modes.\
+\
+4. Explore the relationship between school proximity, travel mode, and potential health implications.\
+:::
 
 ## Datasets: School Data
 
