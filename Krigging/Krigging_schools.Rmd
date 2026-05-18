@@ -462,7 +462,8 @@ age_demo <- saps %>%
                                         T1_1AGE65_69T, T1_1AGE70_74T))) / total_pop,
     pct_71plus = 100 * rowSums(across(c(T1_1AGE75_79T, T1_1AGE80_84T,
                                      T1_1AGEGE_85T))) / total_pop
-  ) %>%
+  )
+age_demo_plot <- age_demo %>%
   filter(!is.na(urban_rural), total_pop > 0) %>%
   pivot_longer(cols = c(pct_0_12, pct_13_21, pct_22_40,
                         pct_41_70, pct_71plus),
@@ -476,12 +477,14 @@ age_demo <- saps %>%
     pct_71plus = "71+"
   ))
 
-ggplot(age_demo, aes(x = percentage)) +
+ggplot(age_demo_plot, aes(x = percentage)) +
   geom_histogram(bins = 30, boundary = 0, alpha = 0.7) +
   facet_grid(urban_rural ~ age_group, scales = "free_y") +
   labs(title = "Age profile distribution by Urban/Rural",
        x = "% of population", y = "Count of Small Areas") +
   theme_bw()
+
+join_age <- age_demo%>%select("SA_PUB2022","pct_0_12","pct_13_21","pct_22_40","pct_41_70","pct_71plus")
 ```
 
 ```{r}
@@ -497,7 +500,8 @@ car_demo <- saps %>%
     pct_0car  = 100 * T6_5_NCH / total_hh,
     pct_1car  = 100 * T6_5_OCH / total_hh,
     pct_2plus = 100 * (T6_5_NGCH + T6_5_ECH + T6_5_CCH) / total_hh
-  ) %>%
+  ) 
+car_demo_plot <- car_demo %>%
   filter(!is.na(urban_rural), total_hh > 0) %>%
   pivot_longer(cols = c(pct_0car, pct_1car, pct_2plus),
                names_to = "car_category",
@@ -508,12 +512,14 @@ car_demo <- saps %>%
     pct_2plus = "2+ cars"
   ))
 
-ggplot(car_demo, aes(x = percentage)) +
+ggplot(car_demo_plot, aes(x = percentage)) +
   geom_histogram(bins = 30, boundary = 0, alpha = 0.7) +
   facet_grid(urban_rural ~ car_category, scales = "free_y") +
   labs(title = "Car ownership distribution by Urban/Rural",
        x = "% of households", y = "Count of Small Areas") +
   theme_bw()
+
+join_car <- car_demo%>%select("SA_PUB2022","pct_0car","pct_1car","pct_2plus")
 ```
 
 ```{r}
@@ -530,7 +536,8 @@ edu_demo <- saps %>%
     pct_secondary    = 100 * (T10_4_LST + T10_4_UST + T10_4_TVT) / total_edu,
     pct_tertiary     = 100 * (T10_4_HCT + T10_4_HDPQT + T10_4_PDT + T10_4_DT) / total_edu,
     pct_still_in_edu = 100 * T10_2_SAST / T1_1AGETT
-  ) %>%
+  )
+edu_demo_plot <- edu_demo %>%
   filter(!is.na(urban_rural), total_edu > 0) %>%
   pivot_longer(cols = c(pct_none_primary, pct_secondary,
                         pct_tertiary, pct_still_in_edu),
@@ -543,12 +550,22 @@ edu_demo <- saps %>%
     pct_still_in_edu = "Still in education"
   ))
 
-ggplot(edu_demo, aes(x = percentage)) +
+ggplot(edu_demo_plot, aes(x = percentage)) +
   geom_histogram(bins = 30, boundary = 0, alpha = 0.7) +
   facet_grid(urban_rural ~ edu_category, scales = "free_y") +
   labs(title = "Education profile distribution by Urban/Rural",
        x = "% of population", y = "Count of Small Areas") +
   theme_bw()
+
+join_edu <- edu_demo%>%select("SA_PUB2022","pct_none_primary","pct_secondary","pct_tertiary", "pct_still_in_edu")
 ```
-
-
+```{r}
+## FINAL DATASET ##
+final_df <- scatter_df%>%left_join(
+  join_age, by = "SA_PUB2022"
+)%>%left_join(
+  join_car, by = "SA_PUB2022"
+)%>%left_join(
+  join_edu, by = "SA_PUB2022"
+)
+```
