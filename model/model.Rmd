@@ -107,4 +107,96 @@ model_urban_krig <- brm(
   control = list(adapt_delta = 0.95)
 )
 ```
+```{r}
+summary(model_urban_krig)
+plot(model_urban_krig)
+```
+```{r}
+krig_grid <- seq(
+  min(df_urban_model$krig_value_z, na.rm = TRUE),
+  max(df_urban_model$krig_value_z, na.rm = TRUE),
+  length.out = 80
+)
 
+marginal_krig <- avg_predictions(
+  model_urban_krig,
+  variables = list(krig_value_z = krig_grid),
+  type = "response"
+)
+
+krig_mean <- mean(df_urban_model$krig_value, na.rm = TRUE)
+krig_sd <- sd(df_urban_model$krig_value, na.rm = TRUE)
+
+marginal_krig <- marginal_krig %>%
+  mutate(
+    krig_value_original = krig_value_z * krig_sd + krig_mean,
+    estimate_pct = estimate * 100,
+    conf.low_pct = conf.low * 100,
+    conf.high_pct = conf.high * 100
+  )
+
+p_krig <- ggplot(marginal_krig, aes(x = krig_value_original, y = estimate_pct)) +
+  geom_ribbon(
+    aes(ymin = conf.low_pct, ymax = conf.high_pct),
+    alpha = 0.2
+  ) +
+  geom_line(linewidth = 1) +
+  labs(
+    title = "Average marginal prediction for krig_value",
+    subtitle = "Predicted active percentage, averaging over the other predictors",
+    x = "krig_value",
+    y = "Predicted active percentage"
+  )
+
+p_krig
+```
+
+```{r}
+make_ilr_marginal <- function(var_name) {
+  
+  var_range <- quantile(
+    df_urban_model[[var_name]],
+    probs = c(0.01, 0.99),
+    na.rm = TRUE
+  )
+  
+  var_grid <- seq(
+    var_range[1],
+    var_range[2],
+    length.out = 60
+  )
+  
+  avg_predictions(
+    model_urban_krig,
+    variables = setNames(list(var_grid), var_name),
+    type = "response"
+  ) %>%
+    mutate(
+      variable = var_name,
+      variable_clean = var_name %>%
+        str_replace("^z_ilr_", "ilr_"),
+      z_value = .data[[var_name]],
+      estimate_pct = estimate * 100,
+      conf.low_pct = conf.low * 100,
+      conf.high_pct = conf.high * 100
+    )
+}
+
+marginal_ilrs <- map_dfr(z_ilr_vars, make_ilr_marginal)
+
+p_ilrs <- ggplot(marginal_ilrs, aes(x = z_value, y = estimate_pct)) +
+  geom_ribbon(
+    aes(ymin = conf.low_pct, ymax = conf.high_pct),
+    alpha = 0.2
+  ) +
+  geom_line(linewidth = 0.8) +
+  facet_wrap(~ variable_clean, scales = "free_x") +
+  labs(
+    title = "Average marginal predictions for ILR variables",
+    subtitle = "Predicted active percentage, averaging over the other predictors",
+    x = "Standardised ILR value",
+    y = "Predicted active percentage"
+  )
+
+p_ilrs
+```
