@@ -50,6 +50,10 @@ format:
           font-weight: 700;
           line-height: 1.4;
         }
+        .map-slide .html-widget {
+          width: 100% !important;
+          height: 520px !important;
+        }
         </style>
 execute:
   echo: false
@@ -106,9 +110,84 @@ The school dataset comes from the **Irish Department of Education** and provides
 - This dataset helps describe the **spatial distribution and size of schools** across Ireland.
 :::
 
-## Datasets: School Data
+## Datasets: School Data {.map-slide}
 
-PLOT
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+library(tidyr)
+library(leaflet)
+schools_df <- readr::read_csv("data/School_Data_Eircode_2024_2025.csv",
+  locale = readr::locale(encoding = "Latin1"),
+  show_col_types = FALSE
+) |>
+  janitor::clean_names()
+
+schools_sf <- schools_df |>
+  dplyr::filter(!is.na(school_latitude), !is.na(school_longitude)) |>
+  sf::st_as_sf(coords = c("school_longitude", "school_latitude"), crs = 4326, remove = FALSE)
+
+enrol <- schools_sf$total_2024_2025
+enrol[is.na(enrol)] <- 0
+radius <- scales::rescale(enrol, to = c(2, 9))
+
+ireland_counties <- sf::st_read("data/gadm41_IRL_shp/gadm41_IRL_2.shp", quiet = TRUE) |>
+  sf::st_transform(4326)
+
+county_counts <- schools_df |>
+  janitor::clean_names() |>
+  dplyr::filter(!is.na(county)) |>
+  dplyr::count(county, name = "n_schools")
+
+ireland_counties <- ireland_counties |>
+  dplyr::left_join(county_counts, by = c("NAME_1" = "county")) |>
+  dplyr::mutate(n_schools = replace_na(n_schools, 0),
+                hover_label = paste0(NAME_1, ": ", n_schools, " schools"))
+
+leaflet(
+  options = leafletOptions(zoomControl = TRUE, scrollWheelZoom = TRUE)
+) |>
+  addProviderTiles(providers$CartoDB.Positron) |>
+
+  addPolygons(
+    data = ireland_counties,
+    fillOpacity = 0,
+    color = "black",
+    weight = 1,
+    opacity = 0.8,
+    label = ~hover_label,
+    labelOptions = labelOptions(
+      direction = "auto",
+      textsize = "14px",
+      style = list("font-weight" = "bold", "padding" = "6px 8px")
+    ),
+    highlightOptions = highlightOptions(
+      weight = 3,
+      color = "black",
+      bringToFront = TRUE
+    )
+  ) |>
+
+  addCircleMarkers(
+    data = schools_sf,
+    lng = ~school_longitude,
+    lat = ~school_latitude,
+    radius = radius,
+    stroke = FALSE,
+    fillOpacity = 0.65,
+    color = "#a80050",
+    popup = NULL
+  ) |>
+
+  fitBounds(
+    lng1 = min(schools_sf$school_longitude, na.rm = TRUE),
+    lat1 = min(schools_sf$school_latitude,  na.rm = TRUE),
+    lng2 = max(schools_sf$school_longitude, na.rm = TRUE),
+    lat2 = max(schools_sf$school_latitude,  na.rm = TRUE)
+  )
+```
+
 
 ## Datasets: Census Data
 
