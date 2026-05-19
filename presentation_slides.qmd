@@ -65,16 +65,20 @@ execute:
 #| include: false
 
 
+
 library(dplyr)
 library(ggplot2)
 library(readr)
 library(readxl)
 library(sf)
-library(plotly)
+library(sp)
+library(gstat)
 library(leaflet)
 library(janitor)
 library(tidyr)
 library(stringr)
+library(plotly)
+library(viridisLite)
 ```
 
 ## {.title-slide}
@@ -137,34 +141,34 @@ library(leaflet)
 schools_df <- readr::read_csv("data/School_Data_Eircode_2024_2025.csv",
   locale = readr::locale(encoding = "Latin1"),
   show_col_types = FALSE
-) |>
+) %>%
   janitor::clean_names()
 
-schools_sf <- schools_df |>
-  dplyr::filter(!is.na(school_latitude), !is.na(school_longitude)) |>
-  sf::st_as_sf(coords = c("school_longitude", "school_latitude"), crs = 4326, remove = FALSE)
+schools_sf <- schools_df %>%
+  filter(!is.na(school_latitude), !is.na(school_longitude)) %>%
+  st_as_sf(coords = c("school_longitude", "school_latitude"), crs = 4326, remove = FALSE)
 
 enrol <- schools_sf$total_2024_2025
 enrol[is.na(enrol)] <- 0
 radius <- scales::rescale(enrol, to = c(2, 9))
 
-ireland_counties <- sf::st_read("data/gadm41_IRL_shp/gadm41_IRL_2.shp", quiet = TRUE) |>
-  sf::st_transform(4326)
+ireland_counties <- st_read("data/gadm41_IRL_shp/gadm41_IRL_2.shp", quiet = TRUE) %>%
+  st_transform(4326)
 
-county_counts <- schools_df |>
-  janitor::clean_names() |>
-  dplyr::filter(!is.na(county)) |>
-  dplyr::count(county, name = "n_schools")
+county_counts <- schools_df %>%
+  janitor::clean_names() %>%
+  filter(!is.na(county)) %>%
+  count(county, name = "n_schools")
 
-ireland_counties <- ireland_counties |>
-  dplyr::left_join(county_counts, by = c("NAME_1" = "county")) |>
-  dplyr::mutate(n_schools = replace_na(n_schools, 0),
+ireland_counties <- ireland_counties %>%
+  left_join(county_counts, by = c("NAME_1" = "county")) %>%
+  mutate(n_schools = replace_na(n_schools, 0),
                 hover_label = paste0(NAME_1, ": ", n_schools, " schools"))
 
 leaflet(
   options = leafletOptions(zoomControl = TRUE, scrollWheelZoom = TRUE)
-) |>
-  addProviderTiles(providers$CartoDB.Positron) |>
+) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
 
   addPolygons(
     data = ireland_counties,
@@ -183,7 +187,7 @@ leaflet(
       color = "black",
       bringToFront = TRUE
     )
-  ) |>
+  ) %>%
 
   addCircleMarkers(
     data = schools_sf,
@@ -194,7 +198,7 @@ leaflet(
     fillOpacity = 0.65,
     color = "#a80050",
     popup = NULL
-  ) |>
+  ) %>%
 
   fitBounds(
     lng1 = min(schools_sf$school_longitude, na.rm = TRUE),
@@ -300,7 +304,7 @@ ggplotly(p) %>%
       y = 0.5,
       font = list(size = 10)
     )
-  )
+  ) 
 ```
 ## Kriging
 
@@ -316,7 +320,133 @@ Kriging is a **spatial interpolation method** used to predict values at location
 
 ## Kriging
 
-```{r}
+
+
+```{r kriging-interactive-map}
+#| echo: false
+#| warning: false
+#| message: false
+#| out-width: "100%"
+#| cache: true
+
+cell <- 5000
+
+schools_df <- read_excel(
+  "data/Data_on_Individual_Schools_Mainstream_2024_25.xlsx",
+  sheet = 2
+) %>%
+  rename(
+    longitude = `School Longitude`,
+    latitude  = `School Latitude`
+  ) %>%
+  filter(!is.na(latitude), !is.na(longitude)) %>%
+  mutate(
+    enrolment = suppressWarnings(as.numeric(`Enrolment per Return`)),
+    log_enrol = log(enrolment)
+  ) %>%
+  filter(is.finite(enrolment), enrolment > 0, is.finite(log_enrol))
+
+ireland_counties <- st_read(
+  "data/gadm41_IRL_shp/gadm41_IRL_2.shp",
+  quiet = TRUE
+)
+
+ireland_sf <- ireland_counties %>%
+  st_transform(2157) %>%
+  st_union() %>%
+  st_as_sf() %>%
+  mutate(id = 1)
+
+schools_sf <- st_as_sf(
+  schools_df,
+  coords = c("longitude", "latitude"),
+  crs = 4326,
+  remove = FALSE
+) %>%
+  st_transform(2157)
+
+schools_irl_sf <- schools_sf[ireland_sf, ] %>%
+  filter(is.finite(log_enrol))
+
+schools_sp <- as(schools_irl_sf, "Spatial")
+
+df_sp <- as.data.frame(schools_sp)
+xy <- sp::coordinates(schools_sp)
+df_sp$x <- xy[, 1]
+df_sp$y <- xy[, 2]
+
+schools_agg <- df_sp %>%
+  group_by(x, y) %>%
+  summarise(log_enrol = mean(log_enrol, na.rm = TRUE), .groups = "drop")
+
+sp::coordinates(schools_agg) <- ~ x + y
+sp::proj4string(schools_agg) <- proj4string(schools_sp)
+
+grid_polys <- st_make_grid(ireland_sf, cellsize = cell, what = "polygons")
+grid_polys <- st_sf(id = seq_along(grid_polys), geometry = grid_polys)
+grid_polys <- st_filter(grid_polys, ireland_sf, .predicate = st_intersects)
+
+grid_centroids_sf <- st_centroid(grid_polys)
+grid_centroids_sp <- as(grid_centroids_sf, "Spatial")
+
+v <- variogram(log_enrol ~ 1, data = schools_agg, width = cell, cutoff = 200000)
+
+fv <- fit.variogram(
+  v,
+  vgm(psill = 0.8, model = "Exp", range = 80000, nugget = 0.1)
+)
+
+kriged_sp <- krige(
+  log_enrol ~ 1,
+  locations = schools_agg,
+  newdata = grid_centroids_sp,
+  model = fv,
+  nmax = 150,
+  nmin = 1,
+  maxdist = 1e6,
+  debug.level = 0
+)
+
+kriged_sp$enrol_pred <- exp(kriged_sp$var1.pred)
+
+kriged_centroids_sf <- st_as_sf(kriged_sp)
+
+grid_polys$enrol_pred <- kriged_centroids_sf$enrol_pred
+grid_polys$krig_var <- kriged_centroids_sf$var1.var
+
+grid_polys_map <- st_transform(grid_polys, 4326)
+ireland_map <- st_transform(ireland_sf, 4326)
+
+pal <- colorNumeric(
+  palette = viridisLite::viridis(256),
+  domain = grid_polys_map$enrol_pred
+)
+
+leaflet() %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolygons(
+    data = grid_polys_map,
+    fillColor = ~pal(enrol_pred),
+    fillOpacity = 0.75,
+    color = "white",
+    weight = 0.2,
+    popup = ~paste0(
+      "<b>Predicted enrolment:</b> ", round(enrol_pred, 1), "<br>",
+      "<b>Kriging variance:</b> ", round(krig_var, 3)
+    )
+  ) %>%
+  addPolygons(
+    data = ireland_map,
+    fill = FALSE,
+    color = "black",
+    weight = 1
+  ) %>%
+  addLegend(
+    pal = pal,
+    values = grid_polys_map$enrol_pred,
+    title = "Predicted enrolment",
+    opacity = 0.8
+  )
 ```
 
 ## Travel Time
