@@ -61,6 +61,22 @@ execute:
   message: false
 ---
 
+```{r setup}
+#| include: false
+
+
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(readxl)
+library(sf)
+library(plotly)
+library(leaflet)
+library(janitor)
+library(tidyr)
+library(stringr)
+```
+
 ## {.title-slide}
 
 ::: {.main-title}
@@ -203,8 +219,89 @@ The census dataset comes from the **Central Statistics Office (CSO)** and provid
 
 ## Datasets: Census
 
-PLOTS
 
+
+```{r active-transport-urban-rural}
+#| echo: false
+#| warning: false
+#| message: false
+#| out-width: "100%"
+
+urb_rural_df <- read_csv("data/SAPS_2022_Small_Area_UR_171024.csv")%>%mutate(
+    category = str_extract(UR_Category_Desc, "(?<=\\.).*"))%>%select("GEOGID","category", "T11_1_FSCCC","T11_1_BISCCC","T11_1_TSCCC","T11_1_NSSCCC","T11_1_WMFHSCCC")%>%distinct()%>%  mutate(
+    urban_rural = case_when(
+      category %in% c(
+        " Cities",
+        " Satellite Urban Towns",
+        " Independent urban towns"
+      ) ~ "Urban",
+      
+      category %in% c(
+        " Rural areas with high urban influence",
+        " Rural areas with moderate urban influence",
+        " Highly rural/remote areas"
+      ) ~ "Rural",
+      
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  rename(geogid = GEOGID)%>%
+  mutate(
+    denom = T11_1_TSCCC - T11_1_WMFHSCCC - T11_1_NSSCCC,
+    perc_active = ifelse(
+      denom > 0,
+      100 * (T11_1_FSCCC + T11_1_BISCCC) / denom,
+      NA_real_
+    )
+  )
+plot_df <- urb_rural_df %>%
+  filter(
+    !is.na(perc_active),
+    perc_active >= 0,
+    perc_active <= 100,
+    !is.na(urban_rural)
+  )
+
+p <- ggplot(plot_df, aes(x = perc_active)) +
+  geom_histogram(
+    aes(y = after_stat(density)),
+    binwidth = 5,
+    boundary = 0,
+    closed = "left",
+    alpha = 0.5
+  ) +
+  geom_density(
+    aes(color = category),
+    trim = TRUE,
+    linewidth = 1,
+    na.rm = TRUE
+  ) +
+  facet_wrap(~ urban_rural, nrow = 2) +
+  labs(
+    x = "Percentage using active transport",
+    y = "Density",
+    title = "Active Transport Distribution by Urban/Rural",
+    color = "Category"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    strip.text = element_text(face = "bold")
+  )
+
+ggplotly(p) %>%
+  layout(
+    height = 480,
+    margin = list(l = 60, r = 330, t = 70, b = 70),
+    legend = list(
+      orientation = "v",
+      x = 1.03,
+      y = 0.5,
+      font = list(size = 10)
+    )
+  )
+```
 ## Kriging
 
 Kriging is a **spatial interpolation method** used to predict values at locations where we do not have observations.
