@@ -235,3 +235,13 @@ ggplot(plot_ilr_data, aes(x = x_value, y = Estimate_pct)) +
   ) +
   theme_minimal(base_size = 13)
 ```
+
+```{r}
+dir.create("data2", showWarnings = FALSE)
+dir.create("models", showWarnings = FALSE)
+
+saveRDS(df_urban_model, "data2/df_urban_model.rds")
+saveRDS(model_urban_krig, "models/model_urban_krig.rds")
+saveRDS(formula_beta, "models/formula_beta.rds")
+saveRDS(urb_rural_df, "data2/urb_rural_df.rds")
+```
