@@ -82,7 +82,8 @@ df_urban_model <- df_urban_model %>%
 
 predictors <- c(
   paste0("z_", ilr_vars),
-  "krig_value_z"
+  "krig_value_z",
+  "z_log_places_density"
 )
 
 formula_beta <- as.formula(

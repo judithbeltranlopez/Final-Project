@@ -96,9 +96,10 @@ A Spatial Analysis of School Travel Behaviour in Ireland
 **Sananthaa Jagadesan Senthamaraikannan**
 :::
 
-## Background
+## {.no-title}
 
-Screenshot notice
+![](images/rte_notice.png){width="80%" fig-align="center"}
+
 
 ## Background
 
@@ -554,7 +555,78 @@ model_urban_krig <- brm(
 :::
 ## Model: Urban Results
 
-Content here.
+## Model: Urban Results
+
+```{r krig-marginal-interactive}
+#| echo: false
+#| warning: false
+#| message: false
+#| out-width: "100%"
+
+
+model_predictors <- all.vars(formula_beta)[-1]
+
+krig_mean <- mean(df_urban_model$krig_value, na.rm = TRUE)
+krig_sd <- sd(df_urban_model$krig_value, na.rm = TRUE)
+
+krig_grid <- seq(
+  min(df_urban_model$krig_value_z, na.rm = TRUE),
+  max(df_urban_model$krig_value_z, na.rm = TRUE),
+  length.out = 100
+)
+
+newdata_krig <- as_tibble(
+  matrix(0, nrow = length(krig_grid), ncol = length(model_predictors))
+)
+
+names(newdata_krig) <- model_predictors
+
+newdata_krig <- newdata_krig %>%
+  mutate(
+    krig_value_z = krig_grid,
+    krig_value_original = krig_value_z * krig_sd + krig_mean
+  )
+
+pred_krig <- fitted(
+  model_urban_krig,
+  newdata = newdata_krig,
+  scale = "response",
+  probs = c(0.025, 0.975)
+)
+
+plot_krig <- bind_cols(
+  newdata_krig,
+  as_tibble(pred_krig)
+) %>%
+  mutate(
+    Estimate_pct = Estimate * 100,
+    Q2.5_pct = Q2.5 * 100,
+    Q97.5_pct = Q97.5 * 100
+  )
+
+p <- ggplot(
+  plot_krig,
+  aes(x = krig_value_original, y = Estimate_pct)
+) +
+  geom_ribbon(
+    aes(ymin = Q2.5_pct, ymax = Q97.5_pct),
+    alpha = 0.2
+  ) +
+  geom_line(linewidth = 1) +
+  labs(
+    title = "Marginal Prediction for Kriging Value",
+    subtitle = "Other predictors fixed at their average standardized value",
+    x = "Kriging value",
+    y = "Predicted active percentage"
+  ) +
+  theme_minimal(base_size = 12)
+
+ggplotly(p) %>%
+  layout(
+    height = 480,
+    margin = list(l = 70, r = 40, t = 80, b = 70)
+  )
+```
 
 ## Model: Urban Results
 
