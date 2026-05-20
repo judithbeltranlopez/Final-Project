@@ -54,6 +54,67 @@ format:
           width: 100% !important;
           height: 520px !important;
         }
+        .reveal .mermaid {
+          transform: scale(1.15);
+          transform-origin: center;
+        }
+        .schema-wrap {
+          position: relative;
+          height: 520px;
+        }
+
+        .schema {
+          position: relative;
+          width: 100%;
+          height: 100%;
+        }
+
+          .box {
+            position: absolute;
+            border: 3px solid #9f1f55;
+            background: #f8eaf1;
+            color: #222;
+            padding: 16px 22px;
+            text-align: center;
+            font-weight: 700;
+            border-radius: 10px;
+            line-height: 1.2;
+          }
+          
+          .small {
+            font-size: 0.65em;
+          }
+
+          .final {
+            background: #9f1f55;
+            color: white;
+          }
+          
+          .census-box {
+            position: absolute;
+            top: 10px;
+            left: 40px;
+            width: 280px;
+            height: 210px;
+            border: 4px solid #9f1f55;
+            border-radius: 12px;
+          }
+          
+          .census-title {
+            color: #9f1f55;
+            font-weight: 800;
+            text-align: center;
+            margin-top: 8px;
+          }
+
+          #commuting { top: 55px; left: 25px; }
+          #active { top: 55px; right: 25px; }
+          
+          #sa { top: 210px; left: 360px; }
+          #school { top: 330px; left: 250px; }
+          #kriging { top: 330px; left: 520px; }
+          #travel { top: 430px; left: 440px; }
+          #final { top: 270px; right: 70px; }
         </style>
 execute:
   echo: false
@@ -473,37 +534,98 @@ PLOT
 
 ## Final Dataset
 
-::: {.center}
+```{r final-dataset-schema}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 12
+#| fig-height: 6
+#| out-width: "100%"
+#| fig-align: center
 
-```{mermaid}
-%%{init: {"theme": "base", "themeVariables": {
-  "primaryColor": "#f8eaf1",
-  "primaryTextColor": "#222222",
-  "primaryBorderColor": "#9f1f55",
-  "lineColor": "#9f1f55",
-  "fontSize": "26px"
-}}}%%
+library(grid)
 
-flowchart LR
-    A["School databases<br/><small>School location and attributes</small>"]
-    B["Census<br/><small>Demographic variables</small>"]
-    C["Kriging<br/><small>Spatial interpolation</small>"]
-    D["Travel times<br/><small>Accessibility measure</small>"]
-    E["Final dataframe<br/><small>Modelling dataset</small>"]
+grid.newpage()
 
-    A --> C
-    B --> C
-    C --> D
-    A --> E
-    B --> E
-    D --> E
+pink  <- "#9f1f55"
+light <- "#f8eaf1"
 
-    classDef box fill:#f8eaf1,stroke:#9f1f55,stroke-width:4px,color:#222222,font-size:26px;
-    class A,B,C,D,E box;
+# ---------- Helper functions ----------
+box <- function(x, y, w, h, label,
+                fill = light, text_col = "black", size = 14) {
+  grid.roundrect(
+    x = x, y = y, width = w, height = h,
+    r = unit(0.025, "snpc"),
+    gp = gpar(fill = fill, col = pink, lwd = 3)
+  )
+  grid.text(
+    label, x = x, y = y,
+    gp = gpar(col = text_col, fontsize = size, fontface = "bold")
+  )
+}
+
+arrow_path <- function(xs, ys) {
+  grid.lines(
+    x = unit(xs, "npc"),
+    y = unit(ys, "npc"),
+    gp = gpar(col = pink, lwd = 3),
+    arrow = arrow(type = "closed", length = unit(0.16, "inches"))
+  )
+}
+
+# ---------- Big CENSUS group ----------
+grid.roundrect(
+  x = 0.18, y = 0.80, width = 0.32, height = 0.30,
+  r = unit(0.03, "snpc"),
+  gp = gpar(fill = "white", col = pink, lwd = 4)
+)
+
+grid.text(
+  "CENSUS",
+  x = 0.18, y = 0.92,
+  gp = gpar(col = pink, fontsize = 20, fontface = "bold")
+)
+
+box(0.12, 0.78, 0.12, 0.08, "Commuting\ndata", size = 11)
+box(0.25, 0.78, 0.14, 0.08, "Proportional\nactive travel", size = 10)
+
+# ---------- Main boxes ----------
+box(0.46, 0.66, 0.14, 0.09, "Census\nSA", size = 14)
+
+box(0.24, 0.38, 0.16, 0.10, "School\ndatabase", size = 14)
+
+box(0.60, 0.48, 0.17, 0.10, "Kriging\nsurface", size = 14)
+
+box(0.60, 0.24, 0.17, 0.10, "Travel\ntime", size = 14)
+
+box(
+  0.86, 0.43, 0.19, 0.12,
+  "Final\ndataframe",
+  fill = pink, text_col = "white", size = 15
+)
+
+# ---------- Arrows ----------
+# Big CENSUS box -> Final dataframe
+arrow_path(c(0.34, 0.60, 0.77), c(0.77, 0.77, 0.50))
+
+# Census SA -> Final dataframe
+arrow_path(c(0.53, 0.66, 0.77), c(0.66, 0.66, 0.54))
+
+# Census SA -> Travel time
+arrow_path(c(0.46, 0.46, 0.515), c(0.615, 0.30, 0.30))
+
+# School database -> Kriging surface
+arrow_path(c(0.32, 0.515), c(0.42, 0.48))
+
+# School database -> Travel time
+arrow_path(c(0.32, 0.515), c(0.34, 0.24))
+
+# Kriging surface -> Final dataframe
+arrow_path(c(0.685, 0.77), c(0.48, 0.45))
+
+# Travel time -> Final dataframe
+arrow_path(c(0.685, 0.77), c(0.24, 0.39))
 ```
-
-:::
-
 ## Descriptive Results
 
 Scatter plot between response variable and travel time / kriging.
