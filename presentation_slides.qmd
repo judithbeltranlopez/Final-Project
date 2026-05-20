@@ -554,7 +554,6 @@ model_urban_krig <- brm(
 - `adapt_delta = 0.95` helps reduce sampling problems.
 :::
 :::
-## Model: Urban Results
 
 ## Model: Urban Results
 
