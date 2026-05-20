@@ -95,11 +95,11 @@ priors <- c(
   prior(exponential(1), class = "phi")
 )
 
-
+# shape model
 model_urban_krig <- brm(
   formula = formula_beta,
   data = df_urban_model,
-  family = Beta(link = "logit"),
+  family = Beta(link = "logit"), # the brm will be modelling the mean 
   prior = priors,
   chains = 4,
   iter = 4000,

@@ -98,6 +98,10 @@ A Spatial Analysis of School Travel Behaviour in Ireland
 
 ## Background
 
+Screenshot notice
+
+## Background
+
 School travel is not only a question of **individual choice** — it is also shaped by **distance, school location, and educational provision**.
 
 - Walking and cycling to school can improve health, learning, traffic congestion, and emissions.
@@ -552,17 +556,31 @@ model_urban_krig <- brm(
 
 Content here.
 
-## Model: Rural Results
+## Model: Urban Results
 
 Content here.
 
 ## Model: Improvements
 
-Content here.
+::: {.incremental}
+- Include a **spatial structure** in the model to account for geographic dependence between schools or areas.
+
+- Consider **zero-inflated beta models** if the response variable contains many exact zero values.
+
+- Explore the **beta distribution shape parameters**, especially alpha, to better understand the distribution of active travel proportions.
+:::
 
 ## Next Steps
 
-Content here.
+::: {.incremental}
+- Estimate the **rural model** and compare its results with the urban model.
+
+- Address the limitation that our **outcome data is restricted**, which may affect model interpretation.
+
+- Run separate analyses by **school type**, while acknowledging possible data limitations.
+
+- Repeat the workflow using **settlement-level data**, which can provide information for the whole town rather than only individual schools.
+:::
 
 ## Conclusions
 
