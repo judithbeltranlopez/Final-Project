@@ -685,10 +685,10 @@ model_urban_krig <- brm(
 #| message: false
 #| out-width: "100%"
 
-df_urban_model <- readRDS("data2/df_urban_model.rds")
-model_urban_krig <- readRDS("models/model_urban_krig.rds")
-formula_beta <- readRDS("models/formula_beta.rds")
-urb_rural_df <- readRDS("data2/urb_rural_df.rds")
+df_urban_model <- readRDS("model/data2/df_urban_model.rds")
+model_urban_krig <- readRDS("model/models/model_urban_krig.rds")
+formula_beta <- readRDS("model/models/formula_beta.rds")
+urb_rural_df <- readRDS("model/data2/urb_rural_df.rds")
 
 model_predictors <- all.vars(formula_beta)[-1]
 

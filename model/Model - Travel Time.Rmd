@@ -1,0 +1,177 @@
+
+---
+title: "Model - Travel Time"
+author: "Sananthaa J S"
+date: "2026-05-22"
+output: html_document
+---
+
+```{r }
+library(tidyverse)
+library(plotly)
+library(dplyr)
+library(ggplot2)
+library(brms)
+library(marginaleffects)
+library(collapse)
+library(compositions)
+```
+
+```{r }
+final_df <- readRDS("D:/Final-Project/DATA/final_df_complete.rds")
+
+model_df <- final_df %>%
+  sf::st_drop_geometry()
+
+df_urban <- model_df %>% filter(urban_rural %in% "Urban")
+
+# ILR transformation on demographic compositional variables
+cols <- c("pct_0_12","pct_13_21","pct_22_40","pct_41_70","pct_71plus",
+          "pct_0car","pct_1car","pct_2plus","pct_none_primary",
+          "pct_secondary","pct_tertiary","pct_still_in_edu")
+
+matrix_urban    <- df_urban %>% select(all_of(cols)) %>% as.matrix()
+variables_ilr   <- ilr(acomp(matrix_urban))
+variables_ilr_df <- as.data.frame(variables_ilr)
+names(variables_ilr_df) <- paste0("ilr_", cols[-length(cols)])
+
+df_urban_model <- df_urban %>%
+  select(-all_of(cols)) %>%
+  bind_cols(variables_ilr_df)
+```
+
+```{r }
+df_urban_model <- df_urban_model %>%
+  mutate(
+    category   = factor(category),
+    county     = factor(COUNTY_ENGLISH),
+    urban_area = factor(SA_URBAN_AREA_NAME),
+    log_area   = log1p(area_km2),
+    z_log_area = as.numeric(scale(log_area)),
+    z_target_pop_norm = as.numeric(scale(target_pop_norm)),
+
+    # Log normalise walking accessibility then z-score
+    log_walk_30   = log1p(access_walk_30),
+    z_log_walk_30 = as.numeric(scale(log_walk_30)),
+
+    # Squeeze outcome for Beta regression
+    perc_active_prop = perc_active / 100,
+    perc_active_beta = (perc_active_prop * (nrow(.) - 1) + 0.5) / nrow(.)
+  ) %>%
+  filter(
+    !is.na(access_walk_30),
+    !is.na(perc_active_beta),
+    !is.na(county),
+    !is.na(urban_area)
+  ) %>%
+  droplevels()
+
+cat("Rows for modelling:", nrow(df_urban_model), "\n")
+cat("Walk range (log z-scored):", range(df_urban_model$z_log_walk_30), "\n")
+```
+
+```{r }
+ilr_vars <- names(df_urban_model) %>%
+  keep(~ str_starts(.x, "ilr_"))
+
+df_urban_model <- df_urban_model %>%
+  mutate(
+    across(
+      all_of(ilr_vars),
+      ~ as.numeric(scale(.x)),
+      .names = "z_{.col}"
+    )
+  )
+
+predictors <- c(
+  paste0("z_", ilr_vars),
+  "z_log_walk_30 "
+)
+
+formula_beta <- as.formula(
+  paste("perc_active_beta ~", paste(predictors, collapse = " + "))
+)
+```
+
+```{r }
+priors <- c(
+  prior(normal(0, 1),   class = "b"),
+  prior(normal(0, 2.5), class = "Intercept"),
+  prior(exponential(1), class = "phi")
+)
+```
+
+```{r }
+model_urban_walk <- brm(
+  formula = formula_beta,
+  data    = df_urban_model,
+  family  = Beta(link = "logit"),
+  prior   = priors,
+  chains  = 4,
+  iter    = 4000,
+  warmup  = 1000,
+  seed    = 123,
+  control = list(adapt_delta = 0.95)
+)
+
+saveRDS(model_urban_walk, "D:/Final-Project/DATA/model_urban_walk.rds")
+```
+
+```{r }
+summary(model_urban_walk)
+plot(model_urban_walk)
+```
+
+```{r }
+model_predictors <- all.vars(formula_beta)[-1]
+
+walk_mean <- mean(df_urban_model$log_walk_30, na.rm = TRUE)
+walk_sd   <- sd(df_urban_model$log_walk_0,   na.rm = TRUE)
+
+walk_grid <- seq(
+  min(df_urban_model$z_log_walk_30, na.rm = TRUE),
+  max(df_urban_model$z_log_walk_30, na.rm = TRUE),
+  length.out = 100
+)
+
+newdata_walk <- as_tibble(
+  matrix(0, nrow = length(walk_grid), ncol = length(model_predictors))
+)
+names(newdata_walk) <- model_predictors
+
+newdata_walk <- newdata_walk %>%
+  mutate(
+    z_log_walk_30   = walk_grid,
+    walk_original   = expm1(z_log_walk_30 * walk_sd + walk_mean)
+  )
+
+pred_walk <- fitted(
+  model_urban_walk,
+  newdata = newdata_walk,
+  scale   = "response",
+  probs   = c(0.025, 0.975)
+)
+
+plot_walk <- bind_cols(newdata_walk, as_tibble(pred_walk)) %>%
+  mutate(
+    Estimate_pct = Estimate * 100,
+    Q2.5_pct     = Q2.5 * 100,
+    Q97.5_pct    = Q97.5 * 100
+  )
+
+ggplot(plot_walk, aes(x = walk_original, y = Estimate_pct)) +
+  geom_ribbon(aes(ymin = Q2.5_pct, ymax = Q97.5_pct), alpha = 0.2) +
+  geom_line(linewidth = 1) +
+  labs(
+    title    = "Effect of walking accessibility on active travel",
+    subtitle = "Other predictors fixed at their average standardised value",
+    x        = "School places reachable by walking 30 min",
+    y        = "Predicted active travel"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+```{r}
+saveRDS(df_urban_model,   "D:/Final-Project/DATA/df_urban_model_walk.rds")
+saveRDS(formula_beta,     "D:/Final-Project/DATA/formula_beta_walk.rds")
+```

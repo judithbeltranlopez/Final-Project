@@ -1,0 +1,112 @@
+---
+title: "Data_prep"
+author: "Sananthaa J S"
+date: "2026-03-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+### import libraries
+library(tidyverse)
+library(sf)
+library(ggplot2)
+library(viridis)
+library(readxl)
+library(dplyr)
+library(scales)
+library(readr)
+# Primary schools (from mainstream xlsx)
+primary <- read_excel("./DATA/Data_on_Individual_Schools_Mainstream_2024_25.xlsx",
+                      sheet = "Mainstream Schools", skip = 0) %>%   # ← change to 0
+  rename(roll_number = `Roll Number`,
+         name        = `Official Name`,
+         places      = `Enrolment per Return`,
+         lat         = `School Latitude`,
+         lon         = `School Longitude`) %>%
+  mutate(places = suppressWarnings(as.numeric(places))) %>%
+  filter(!is.na(lat), !is.na(lon), !is.na(places), places > 0) %>%
+  select(roll_number, name, places, lat, lon)
+# Post-primary schools (from eircode CSV)
+post_primary <- read.csv("./DATA/School_Data_Eircode_2024_2025.csv", 
+                         fileEncoding = "latin1") %>%
+  mutate(places = as.numeric(gsub(",", "", Total.2024.2025))) %>%
+  filter(!is.na(School.Latitude), !is.na(School.Longitude), !is.na(places), places > 0) %>%
+  select(roll_number = Roll.Number,
+         name        = Official.School.Name,
+         places,
+         lat         = School.Latitude,
+         lon         = School.Longitude)
+# Combine into single sf object
+schools_sf <- bind_rows(primary, post_primary) %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326)
+# CSA centroids for r5r origins
+sa <- st_read("./DATA/Small_Area_National_Statistical_Boundaries_2022.geojson", quiet = TRUE)
+csa_centroids <- st_centroid(sa)
+# Quick check
+cat("Total schools:", nrow(schools_sf), "\n")
+cat("CSA centroids:", nrow(csa_centroids), "\n")
+```
+##schools_Sf
+#Loaded primary schools from the xlsx (3,081 schools)
+#Loaded post-primary from the eircode CSV (723 schools)
+#Combined into one schools_sf object → 3,804 schools total
+
+##csa_centriods
+#Read the CSA boundary GeoJSON
+#Extracted the centroid (centre point) of each polygon → 18,919 centroids
+
+#all schools as spatial points with enrolment - school_sf
+#one point per CSA, ready to use as origins in r5r - csa_centroids
+
+You can also embed plots, for example:
+```{r save-outputs}
+saveRDS(schools_sf,    "./DATA/schools_sf.rds")
+saveRDS(csa_centroids, "./DATA/csa_centroids.rds")
+cat("Saved successfully\n")
+```
+```{r}
+library(sf)
+library(dplyr)
+
+# Load saved data from data_prep
+schools_sf      <- readRDS("./DATA/schools_sf.rds")
+csa_centroids   <- readRDS("./DATA/csa_centroids.rds")
+
+# r5r needs data frames with specific columns: id, lon, lat
+origins <- csa_centroids %>%
+  st_transform(4326) %>%
+  mutate(
+    id  = as.character(SA_PUB2022),
+    lon = st_coordinates(.)[,1],
+    lat = st_coordinates(.)[,2]
+  ) %>%
+  st_drop_geometry() %>%
+  select(id, lon, lat)
+
+destinations <- schools_sf %>%
+  st_transform(4326) %>%
+  mutate(
+    id  = as.character(roll_number),
+    lon = st_coordinates(.)[,1],
+    lat = st_coordinates(.)[,2]
+  ) %>%
+  st_drop_geometry() %>%
+  select(id, lon, lat, places)
+
+cat("Origins:", nrow(origins), "\n")
+cat("Destinations:", nrow(destinations), "\n")
+```
+SA_PUB2022 — CSA identifier (used to join everything)
+roll_number, name, places, lat, lon — school columns
+schools_sf and csa_centroids as the two spatial objects
+
