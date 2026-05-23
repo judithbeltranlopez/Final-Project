@@ -752,9 +752,7 @@ arrow_path(c(0.685, 0.77), c(0.48, 0.45))
 # Travel time -> Final dataframe
 arrow_path(c(0.685, 0.77), c(0.24, 0.39))
 ```
-## Descriptive Results
 
-Scatter plot between response variable and travel time / kriging.
 
 ## Model
 
