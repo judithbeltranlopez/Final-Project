@@ -568,4 +568,7 @@ final_df <- scatter_df%>%left_join(
 )%>%left_join(
   join_edu, by = "SA_PUB2022"
 )
+
+saveRDS(final_df, "D:/Final-Project/DATA/final_df.rds")
+cat("Saved final_df:", nrow(final_df), "rows\n")
 ```

@@ -7,6 +7,7 @@ output: html_document
 ---
 
 ```{r }
+
 library(tidyverse)
 library(plotly)
 library(dplyr)
@@ -126,7 +127,7 @@ plot(model_urban_walk)
 model_predictors <- all.vars(formula_beta)[-1]
 
 walk_mean <- mean(df_urban_model$log_walk_30, na.rm = TRUE)
-walk_sd   <- sd(df_urban_model$log_walk_0,   na.rm = TRUE)
+walk_sd   <- sd(df_urban_model$log_walk_30,   na.rm = TRUE)
 
 walk_grid <- seq(
   min(df_urban_model$z_log_walk_30, na.rm = TRUE),
