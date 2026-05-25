@@ -175,6 +175,8 @@ School travel is not only a question of **individual choice** — it is also sha
 
 ## Objectives
 
+Working with **official statistics**, which usually provide **aggregated data**, creates challenges for analysing school travel behaviour at a detailed spatial level.
+
 ::: {.incremental}
 1. Map and analyse the spatial distribution of schools across Ireland.
 
@@ -983,6 +985,9 @@ ggplotly(p) %>%
 - Consider **zero-inflated beta models** if the response variable contains many exact zero values.
 
 - Explore the **beta distribution shape parameters**, especially alpha, to better understand the distribution of active travel proportions.
+
+- Consider **zero- and one-inflated beta models** if the response variable contains many exact 0 and 1 values.
+
 :::
 
 ## Next Steps
@@ -992,7 +997,7 @@ ggplotly(p) %>%
 
 - Address the limitation that our **outcome data is restricted**, which may affect model interpretation.
 
-- Run separate analyses by **school type**, while acknowledging possible data limitations.
+- Run separate analyses by **school type** (primary and secondary), while acknowledging possible data limitations.
 
 - Repeat the workflow using **settlement-level data**, which can provide information for the whole town rather than only individual schools.
 :::
