@@ -1,0 +1,304 @@
+---
+title: "krigging_new_version"
+output: html_document
+---
+
+```{r}
+### import libraries
+library(tidyverse)
+library(plotly)
+library(kableExtra)
+library(leaflet)
+library(htmltools)
+library(janitor)
+library(sf)
+library(sp)
+library(gstat)
+library(ggplot2)
+library(viridis)
+library(readxl)
+library(dplyr)
+library(stringr)
+library(scales)
+library(readr)
+```
+
+```{r}
+# ---------------------------------------------------------
+# 1) Read Small Areas
+# ---------------------------------------------------------
+
+sa <- st_read("../data/Small_Area_National_Statistical_Boundaries_2022.geojson", quiet = TRUE)
+
+id_candidates <- c("GEOGID", "SA_GUID", "SAID", "SA_ID", "SMALL_AREA", "OBJECTID", "FID")
+sa_id <- id_candidates[id_candidates %in% names(sa)][1]
+
+if (is.na(sa_id)) {
+  sa <- sa %>% mutate(sa_uid = row_number())
+  sa_id <- "sa_uid"
+}
+
+# Same CRS as kriging data
+sa <- sa %>%
+  st_make_valid() %>%
+  st_transform(st_crs(dat_irl$region_sf))
+
+
+# ---------------------------------------------------------
+# 2) Function: create 3 x 3 prediction points inside each Small Area
+# ---------------------------------------------------------
+
+make_sa_3x3_points <- function(sa, sa_id, n_side = 3) {
+  
+  sa <- st_make_valid(sa)
+  
+  pts_all <- purrr::map_dfr(seq_len(nrow(sa)), function(i) {
+    
+    poly <- sa[i, ]
+    
+    # Create 3 x 3 grid over this Small Area bounding box
+    g <- st_make_grid(
+      poly,
+      n = c(n_side, n_side),
+      what = "polygons"
+    )
+    
+    g <- st_sf(
+      local_cell_id = seq_along(g),
+      geometry = g,
+      crs = st_crs(sa)
+    )
+    
+    # Clip the 3 x 3 cells to the actual Small Area polygon
+    clipped <- suppressWarnings(
+      st_intersection(
+        g,
+        poly %>% select(all_of(sa_id))
+      )
+    )
+    
+    clipped <- clipped %>%
+      st_make_valid() %>%
+      filter(!st_is_empty(geometry)) %>%
+      mutate(area_w = as.numeric(st_area(geometry))) %>%
+      filter(area_w > 0)
+    
+    if (nrow(clipped) == 0) return(NULL)
+    
+    # One guaranteed-inside point per clipped grid cell
+    pts <- st_point_on_surface(clipped)
+    
+    pts %>%
+      mutate(
+        sa_sample_id = paste0(.data[[sa_id]], "_", local_cell_id)
+      )
+  })
+  
+  pts_all %>%
+    mutate(sample_row = row_number())
+}
+
+
+sa_3x3_pts_sf <- make_sa_3x3_points(
+  sa = sa,
+  sa_id = sa_id,
+  n_side = 3
+)
+
+sa_3x3_pts_sp <- as(sa_3x3_pts_sf, "Spatial")
+```
+
+```{r}
+# ---------------------------------------------------------
+# 3) Krige directly at the 3 x 3 points inside each Small Area
+# ---------------------------------------------------------
+
+run_sa_3x3_kriging <- function(
+  schools_agg_sp,
+  prediction_points_sf,
+  prediction_points_sp,
+  sa,
+  sa_id,
+  width,
+  cutoff,
+  vgm_start,
+  nmax = 150,
+  nmin = 1,
+  maxdist = 1e6
+) {
+  
+  # Empirical variogram
+  v <- variogram(
+    log_enrol ~ 1,
+    data = schools_agg_sp,
+    width = width,
+    cutoff = cutoff
+  )
+  
+  # Fit variogram model
+  fv <- fit.variogram(v, vgm_start)
+  
+  # Ordinary kriging at the 3 x 3 Small Area points
+  kriged_sp <- krige(
+    log_enrol ~ 1,
+    locations = schools_agg_sp,
+    newdata   = prediction_points_sp,
+    model     = fv,
+    nmax      = nmax,
+    nmin      = nmin,
+    maxdist   = maxdist
+  )
+  
+  kriged_sf <- st_as_sf(kriged_sp)
+  
+  # Reattach Small Area metadata
+  kriged_sf <- kriged_sf %>%
+    mutate(
+      !!sa_id := prediction_points_sf[[sa_id]],
+      local_cell_id = prediction_points_sf$local_cell_id,
+      sa_sample_id = prediction_points_sf$sa_sample_id,
+      area_w = prediction_points_sf$area_w,
+      enrol_pred = exp(var1.pred)
+    )
+  
+  # Aggregate the 3 x 3 predictions back to one value per Small Area
+  sa_agg <- kriged_sf %>%
+    st_drop_geometry() %>%
+    group_by(.data[[sa_id]]) %>%
+    summarise(
+      krig_value = weighted.mean(enrol_pred, area_w, na.rm = TRUE),
+      krig_var   = weighted.mean(var1.var, area_w, na.rm = TRUE),
+      n_samples  = n(),
+      .groups = "drop"
+    )
+  
+  sa_with_krig <- sa %>%
+    left_join(sa_agg, by = sa_id)
+  
+  list(
+    variogram = v,
+    variogram_model = fv,
+    kriged_points_sf = kriged_sf,
+    sa_with_krig = sa_with_krig
+  )
+}
+
+
+res_sa <- run_sa_3x3_kriging(
+  schools_agg_sp       = dat_irl$schools_agg_sp,
+  prediction_points_sf = sa_3x3_pts_sf,
+  prediction_points_sp = sa_3x3_pts_sp,
+  sa                   = sa,
+  sa_id                = sa_id,
+  width  = 5000,
+  cutoff = 200000,
+  vgm_start = gstat::vgm(
+    psill = 0.8,
+    model = "Exp",
+    range = 80000,
+    nugget = 0.1
+  ),
+  nmax = 150
+)
+```
+
+```{r}
+ggplot(res_sa$sa_with_krig |> st_drop_geometry(), aes(x = krig_value)) +
+  geom_histogram(bins = 30) +
+  scale_x_log10() +
+  labs(
+    title = "Histogram of kriging values by Small Area",
+    subtitle = "Each Small Area estimated from a 3 x 3 internal prediction grid",
+    x = "Kriging value, log10 scale",
+    y = "Count of Small Areas"
+  ) +
+  theme_bw()
+```
+
+```{r}
+# ---------------------------------------------------------
+# 4) Leaflet map
+# ---------------------------------------------------------
+
+sa_map <- res_sa$sa_with_krig %>%
+  st_transform(4326) %>%
+  mutate(
+    popup_text = paste0(
+      "<b>Small Area ID:</b> ", .data[[sa_id]], "<br>",
+      "<b>Predicted enrolment:</b> ", round(krig_value, 1), "<br>",
+      "<b>Kriging variance:</b> ", round(krig_var, 3), "<br>",
+      "<b>Prediction points used:</b> ", n_samples
+    )
+  )
+
+ireland_map <- dat_irl$region_sf %>%
+  st_transform(4326)
+
+pal <- colorNumeric(
+  palette = viridis::viridis(256),
+  domain = sa_map$krig_value[is.finite(sa_map$krig_value)],
+  na.color = "transparent"
+)
+
+leaflet() %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolygons(
+    data = sa_map,
+    fillColor = ~pal(krig_value),
+    fillOpacity = 0.75,
+    color = "white",
+    weight = 0.2,
+    popup = ~popup_text
+  ) %>%
+  addPolygons(
+    data = ireland_map,
+    fill = FALSE,
+    color = "black",
+    weight = 1
+  ) %>%
+  addLegend(
+    pal = pal,
+    values = sa_map$krig_value,
+    title = "Predicted enrolment",
+    opacity = 0.8
+  )
+```
+
+
+```{r}
+library(sf)
+library(dplyr)
+
+# Folder to save outputs
+dir.create("outputs", showWarnings = FALSE)
+
+# Small Areas with kriging values
+sa_map <- res_sa$sa_with_krig %>%
+  st_transform(4326) %>%
+  mutate(
+    popup_text = paste0(
+      "<b>Small Area ID:</b> ", .data[[sa_id]], "<br>",
+      "<b>Predicted enrolment:</b> ", round(krig_value, 1), "<br>",
+      "<b>Kriging variance:</b> ", round(krig_var, 3), "<br>",
+      "<b>Prediction points used:</b> ", n_samples
+    )
+  )
+
+# Ireland boundary
+ireland_map <- dat_irl$region_sf %>%
+  st_transform(4326)
+
+# Save everything needed for the Quarto slide
+kriging_map_objects <- list(
+  sa_map = sa_map,
+  ireland_map = ireland_map,
+  sa_id = sa_id
+)
+
+saveRDS(
+  kriging_map_objects,
+  file = "outputs/kriging_map_objects.rds"
+)
+
+
+```
