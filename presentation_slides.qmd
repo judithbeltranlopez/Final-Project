@@ -4,11 +4,34 @@ format:
     theme: simple
     slide-number: true
     transition: slide
+    center: false
+    width: 1400
+    height: 800
+    margin: 0.08
     include-in-header:
       text: |
         <style>
         .reveal {
-          font-size: 35px;
+          font-size: 34px;
+        }
+
+        .reveal section {
+          text-align: left;
+        }
+
+        .reveal h2 {
+          color: #9f1f55;
+          font-size: 1.5em;
+          margin-bottom: 25px;
+        }
+
+        .reveal p {
+          line-height: 1.25;
+        }
+
+        .reveal li {
+          line-height: 1.25;
+          margin-bottom: 0.35em;
         }
 
         .title-slide {
@@ -36,13 +59,6 @@ format:
           line-height: 1.5;
         }
 
-        .reveal h2 {
-          color: #9f1f55;
-        }
-
-        .reveal .mermaid {
-          font-size: 26px;
-        }
         .model-flow {
           width: 80%;
           margin: 0 auto;
@@ -50,71 +66,11 @@ format:
           font-weight: 700;
           line-height: 1.4;
         }
+
         .map-slide .html-widget {
           width: 100% !important;
           height: 520px !important;
         }
-        .reveal .mermaid {
-          transform: scale(1.15);
-          transform-origin: center;
-        }
-        .schema-wrap {
-          position: relative;
-          height: 520px;
-        }
-
-        .schema {
-          position: relative;
-          width: 100%;
-          height: 100%;
-        }
-
-          .box {
-            position: absolute;
-            border: 3px solid #9f1f55;
-            background: #f8eaf1;
-            color: #222;
-            padding: 16px 22px;
-            text-align: center;
-            font-weight: 700;
-            border-radius: 10px;
-            line-height: 1.2;
-          }
-          
-          .small {
-            font-size: 0.65em;
-          }
-
-          .final {
-            background: #9f1f55;
-            color: white;
-          }
-          
-          .census-box {
-            position: absolute;
-            top: 10px;
-            left: 40px;
-            width: 280px;
-            height: 210px;
-            border: 4px solid #9f1f55;
-            border-radius: 12px;
-          }
-          
-          .census-title {
-            color: #9f1f55;
-            font-weight: 800;
-            text-align: center;
-            margin-top: 8px;
-          }
-
-          #commuting { top: 55px; left: 25px; }
-          #active { top: 55px; right: 25px; }
-          
-          #sa { top: 210px; left: 360px; }
-          #school { top: 330px; left: 250px; }
-          #kriging { top: 330px; left: 520px; }
-          #travel { top: 430px; left: 440px; }
-          #final { top: 270px; right: 70px; }
         </style>
 execute:
   echo: false
@@ -542,8 +498,8 @@ library(ggplot2)
 library(dplyr)
 library(patchwork)
 
-access_walk  <- readRDS("D:/Final-Project/DATA/access_walk_clean.rds")
-access_cycle <- readRDS("D:/Final-Project/DATA/access_cycle_clean.rds")
+access_walk  <- readRDS("DATA/access_walk_clean.rds")
+access_cycle <- readRDS("DATA/access_cycle_clean.rds")
 
 library(readr)
 library(stringr)
@@ -602,7 +558,7 @@ p_walk + p_cycle
 
 library(plotly)
 
-final_df_complete <- readRDS("D:/Final-Project/DATA/final_df_complete.rds")
+final_df_complete <- readRDS("DATA/final_df_complete.rds")
 
 compare_df <- final_df_complete %>%
   filter(
@@ -880,7 +836,7 @@ ggplotly(p) %>%
   )
 ```
 
-## Model: Implementation
+
 
 ## Model: Implementation
 
@@ -922,9 +878,9 @@ library(dplyr)
 library(ggplot2)
 library(plotly)
 
-df_urban_model <- readRDS("D:/Final-Project/DATA/df_urban_model_walk.rds")
-model_urban_walk <- readRDS("D:/Final-Project/DATA/model_urban_walk.rds")
-formula_beta <- readRDS("D:/Final-Project/DATA/formula_beta_walk.rds")
+df_urban_model <- readRDS("DATA/df_urban_model_walk.rds")
+model_urban_walk <- readRDS("DATA/model_urban_walk.rds")
+formula_beta <- readRDS("DATA/formula_beta_walk.rds")
 
 model_predictors <- all.vars(formula_beta)[-1]
 
