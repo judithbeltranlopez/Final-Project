@@ -746,7 +746,10 @@ and school context**
 #| eval: false
 
 model_urban_krig <- brm(
-  formula = formula_beta,
+  formula = perc_active_beta ~ ilr_pct_0_12 + ilr_pct_13_21 + ilr_pct_22_40 + 
+    ilr_pct_41_70 + ilr_pct_71plus + ilr_pct_0car + ilr_pct_1car + 
+    ilr_pct_2plus + ilr_pct_none_primary + ilr_pct_secondary + 
+    ilr_pct_tertiary + krig_value + log_places_density,
   data = df_urban_model,
   family = Beta(link = "logit"),
   prior = priors,
