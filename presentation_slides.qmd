@@ -960,8 +960,19 @@ ggplotly(p) %>%
 
 ## Conclusions
 
-Content here.
+## Conclusions
 
+::: {.incremental}
+- School travel behaviour is strongly shaped by **spatial accessibility**, not only by individual preferences.
+
+- Combining **school data, census variables, kriging, and travel-time measures** creates a richer final dataset for analysing active travel.
+
+- Urban and rural areas show different accessibility patterns, so they should be modelled separately.
+
+- Bayesian beta regression is appropriate for modelling **active travel proportions**, while also quantifying uncertainty.
+
+- The analysis highlights the limitations of aggregated official statistics for detailed spatial mobility research.
+:::
 ## {.center}
 
 ::: {.main-title}
