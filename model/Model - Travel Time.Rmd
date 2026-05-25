@@ -19,7 +19,7 @@ library(compositions)
 ```
 
 ```{r }
-final_df <- readRDS("D:/Final-Project/DATA/final_df_complete.rds")
+final_df <- readRDS("DATA/final_df_complete.rds")
 
 model_df <- final_df %>%
   sf::st_drop_geometry()
@@ -115,7 +115,7 @@ model_urban_walk <- brm(
   control = list(adapt_delta = 0.95)
 )
 
-saveRDS(model_urban_walk, "D:/Final-Project/DATA/model_urban_walk.rds")
+saveRDS(model_urban_walk, " DATA/model_urban_walk.rds")
 ```
 
 ```{r }
@@ -173,6 +173,6 @@ ggplot(plot_walk, aes(x = walk_original, y = Estimate_pct)) +
 ```
 
 ```{r}
-saveRDS(df_urban_model,   "D:/Final-Project/DATA/df_urban_model_walk.rds")
-saveRDS(formula_beta,     "D:/Final-Project/DATA/formula_beta_walk.rds")
+saveRDS(df_urban_model,   "DATA/df_urban_model_walk.rds")
+saveRDS(formula_beta,     "DATA/formula_beta_walk.rds")
 ```

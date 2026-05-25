@@ -18,11 +18,11 @@ library(stringr)
 ```
 
 ```{r build-network}
-r5r_core <- r5r::build_network(data_path = "D:/Final-Project/DATA")
+r5r_core <- r5r::build_network(data_path = "DATA")
 ```
 
 ```{r load-origins-destinations}
-origins <- readRDS("D:/Final-Project/DATA/csa_centroids.rds") %>%
+origins <- readRDS("DATA/csa_centroids.rds") %>%
   st_transform(4326) %>%
   mutate(
     id  = as.character(SA_PUB2022),
@@ -32,7 +32,7 @@ origins <- readRDS("D:/Final-Project/DATA/csa_centroids.rds") %>%
   st_drop_geometry() %>%
   select(id, lon, lat)
 
-destinations <- readRDS("D:/Final-Project/DATA/schools_sf.rds") %>%
+destinations <- readRDS("DATA/schools_sf.rds") %>%
   st_transform(4326) %>%
   mutate(
     id  = as.character(roll_number),
@@ -47,7 +47,7 @@ cat("Destinations:", nrow(destinations), "\n")
 ```
 
 ```{r load-saps}
-saps_active <- read_csv("D:/Final-Project/data/SAPS_2022_Small_Area_UR_171024.csv") %>%
+saps_active <- read_csv("data/SAPS_2022_Small_Area_UR_171024.csv") %>%
   filter(T1_1AGETT <= 950) %>%
   mutate(
     SA_PUB2022  = as.character(GEOGID),
@@ -58,7 +58,7 @@ saps_active <- read_csv("D:/Final-Project/data/SAPS_2022_Small_Area_UR_171024.cs
   ) %>%
   select(SA_PUB2022, perc_active)
 
-urb_rural <- read_csv("D:/Final-Project/data/SAPS_2022_Small_Area_UR_171024.csv") %>%
+urb_rural <- read_csv("data/SAPS_2022_Small_Area_UR_171024.csv") %>%
   mutate(
     category    = str_extract(UR_Category_Desc, "(?<=\\.).*"),
     urban_rural = case_when(
@@ -86,7 +86,7 @@ access_walk <- r5r::accessibility(
   cutoffs                = c(10, 20, 30)
 )
 
-saveRDS(access_walk, "D:/Final-Project/DATA/access_walk_clean.rds")
+saveRDS(access_walk, "DATA/access_walk_clean.rds")
 cat("Walking rows:", nrow(access_walk), "\n")
 ```
 
@@ -102,7 +102,7 @@ access_cycle <- r5r::accessibility(
   cutoffs                = c(5, 10, 15, 20)
 )
 
-saveRDS(access_cycle, "D:/Final-Project/DATA/access_cycle_clean.rds")
+saveRDS(access_cycle, "DATA/access_cycle_clean.rds")
 cat("Cycling rows:", nrow(access_cycle), "\n")
 ```
 
@@ -196,7 +196,7 @@ plot_ly(scatter_cycle_20,
 ```
 
 ```{r final-dataset}
-final_df <- readRDS("D:/Final-Project/DATA/final_df.rds")
+final_df <- readRDS("DATA/final_df.rds")
 
 walk_wide <- access_walk %>%
   mutate(SA_PUB2022 = as.character(id)) %>%
@@ -220,7 +220,7 @@ final_df_complete <- final_df %>%
   left_join(walk_wide,  by = "SA_PUB2022") %>%
   left_join(cycle_wide, by = "SA_PUB2022")
 
-saveRDS(final_df_complete, "D:/Final-Project/DATA/final_df_complete.rds")
+saveRDS(final_df_complete, "DATA/final_df_complete.rds")
 
 cat("Rows:", nrow(final_df_complete), "\n")
 cat("Columns:", ncol(final_df_complete), "\n")
