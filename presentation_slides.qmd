@@ -958,7 +958,6 @@ ggplotly(p) %>%
 - Repeat the workflow using **settlement-level data**, which can provide information for the whole town rather than only individual schools.
 :::
 
-## Conclusions
 
 ## Conclusions
 
