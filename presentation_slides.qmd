@@ -4,6 +4,7 @@ format:
     theme: simple
     slide-number: true
     transition: slide
+    embed-resources: true
     center: false
     width: 1400
     height: 800
@@ -248,16 +249,23 @@ The census dataset comes from the **Central Statistics Office (CSO)** and provid
 
 ## Datasets: Census
 
-
-
 ```{r active-transport-urban-rural}
 #| echo: false
 #| warning: false
 #| message: false
 #| out-width: "100%"
 
-urb_rural_df <- read_csv("data/SAPS_2022_Small_Area_UR_171024.csv")%>%mutate(
-    category = str_extract(UR_Category_Desc, "(?<=\\.).*"))%>%select("GEOGID","category", "T11_1_FSCCC","T11_1_BISCCC","T11_1_TSCCC","T11_1_NSSCCC","T11_1_WMFHSCCC")%>%distinct()%>%  mutate(
+urb_rural_df <- read_csv("data/SAPS_2022_Small_Area_UR_171024.csv") %>%
+  mutate(
+    category = str_extract(UR_Category_Desc, "(?<=\\.).*")
+  ) %>%
+  select(
+    "GEOGID", "category",
+    "T11_1_FSCCC", "T11_1_BISCCC",
+    "T11_1_TSCCC", "T11_1_NSSCCC", "T11_1_WMFHSCCC"
+  ) %>%
+  distinct() %>%
+  mutate(
     urban_rural = case_when(
       category %in% c(
         " Cities",
@@ -274,7 +282,7 @@ urb_rural_df <- read_csv("data/SAPS_2022_Small_Area_UR_171024.csv")%>%mutate(
       TRUE ~ NA_character_
     )
   ) %>%
-  rename(geogid = GEOGID)%>%
+  rename(geogid = GEOGID) %>%
   mutate(
     denom = T11_1_TSCCC - T11_1_WMFHSCCC - T11_1_NSSCCC,
     perc_active = ifelse(
@@ -283,6 +291,7 @@ urb_rural_df <- read_csv("data/SAPS_2022_Small_Area_UR_171024.csv")%>%mutate(
       NA_real_
     )
   )
+
 plot_df <- urb_rural_df %>%
   filter(
     !is.na(perc_active),
@@ -303,34 +312,34 @@ p <- ggplot(plot_df, aes(x = perc_active)) +
     aes(color = category),
     trim = TRUE,
     linewidth = 1,
-    na.rm = TRUE
+    na.rm = TRUE,
+    show.legend = FALSE
   ) +
   facet_wrap(~ urban_rural, nrow = 2) +
   labs(
     x = "Percentage using active transport",
     y = "Density",
-    title = "Active Transport Distribution by Urban/Rural",
-    color = "Category"
+    title = "Active Transport Distribution by Urban/Rural"
   ) +
-  theme_minimal() +
+  guides(color = "none") +
+  theme_minimal(base_size = 14) +
   theme(
-    legend.position = "right",
-    plot.title = element_text(face = "bold", hjust = 0.5),
-    strip.text = element_text(face = "bold")
+    legend.position = "none",
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 16),
+    strip.text = element_text(face = "bold", size = 14),
+    axis.title = element_text(size = 13),
+    axis.text = element_text(size = 11)
   )
 
 ggplotly(p) %>%
   layout(
-    height = 480,
-    margin = list(l = 60, r = 330, t = 70, b = 70),
-    legend = list(
-      orientation = "v",
-      x = 1.03,
-      y = 0.5,
-      font = list(size = 10)
-    )
-  ) 
+    height = 520,
+    showlegend = FALSE,
+    margin = list(l = 70, r = 30, t = 70, b = 70)
+  )
 ```
+
+
 ## Kriging
 
 Kriging is a **spatial interpolation method** used to predict values at locations where we do not have observations.
@@ -547,75 +556,6 @@ p_cycle <- access_cycle_urban %>%
 p_walk + p_cycle
 ```
 
-
-## Travel time - Kriging Vs Travel Time
-
-```{r krig-vs-travel}
-#| echo: false
-#| warning: false
-#| message: false
-#| out-width: "100%"
-
-library(plotly)
-
-final_df_complete <- readRDS("DATA/final_df_complete.rds")
-
-compare_df <- final_df_complete %>%
-  filter(
-    urban_rural == "Urban",
-    !is.na(perc_active),
-    !is.na(krig_value),
-    !is.na(access_walk_30),
-    !is.na(access_cycle_20),
-    krig_value > 0,
-    access_walk_30 > 0,
-    access_cycle_20 > 0
-  ) %>%
-  mutate(
-    log_krig     = log1p(krig_value),
-    log_walk_30  = log1p(access_walk_30),
-    log_cycle_20 = log1p(access_cycle_20)
-  )
-
-p_krig <- plot_ly(compare_df,
-        x = ~log_krig, y = ~perc_active,
-        type = "scatter", mode = "markers",
-        marker = list(opacity = 0.3, color = "#e74c3c", size = 3),
-        text = ~paste("Kriging (log):", round(log_krig, 2),
-                      "<br>Active travel:", round(perc_active, 1), "%"),
-        hoverinfo = "text") %>%
-  layout(xaxis = list(title = "Kriging (log1p)"),
-         yaxis = list(title = "% active travel"),
-         title = "Kriging")
-
-p_walk <- plot_ly(compare_df,
-        x = ~log_walk_30, y = ~perc_active,
-        type = "scatter", mode = "markers",
-        marker = list(opacity = 0.3, color = "#2980b9", size = 3),
-        text = ~paste("Walk (log):", round(log_walk_30, 2),
-                      "<br>Active travel:", round(perc_active, 1), "%"),
-        hoverinfo = "text") %>%
-  layout(xaxis = list(title = "Walking 30 min (log1p)"),
-         yaxis = list(title = "% active travel"),
-         title = "r5r Walking")
-
-p_cycle <- plot_ly(compare_df,
-        x = ~log_cycle_20, y = ~perc_active,
-        type = "scatter", mode = "markers",
-        marker = list(opacity = 0.3, color = "#27ae60", size = 3),
-        text = ~paste("Cycle (log):", round(log_cycle_20, 2),
-                      "<br>Active travel:", round(perc_active, 1), "%"),
-        hoverinfo = "text") %>%
-  layout(xaxis = list(title = "Cycling 20 min (log1p)"),
-         yaxis = list(title = "% active travel"),
-         title = "r5r Cycling")
-
-subplot(p_krig, p_walk, p_cycle,
-        nrows = 1, shareY = TRUE, titleX = TRUE) %>%
-  layout(title = "Kriging vs Travel Time - Urban CSAs (log normalised)",
-         showlegend = FALSE)
-```
-
 ## Final Dataset
 
 ```{r final-dataset-schema}
@@ -711,6 +651,76 @@ arrow_path(c(0.685, 0.77), c(0.48, 0.45))
 arrow_path(c(0.685, 0.77), c(0.24, 0.39))
 ```
 
+## Kriging Vs Travel Time
+
+```{r krig-vs-travel}
+#| echo: false
+#| warning: false
+#| message: false
+#| out-width: "100%"
+
+library(plotly)
+
+final_df_complete <- readRDS("DATA/final_df_complete.rds")
+
+compare_df <- final_df_complete %>%
+  filter(
+    urban_rural == "Urban",
+    !is.na(perc_active),
+    !is.na(krig_value),
+    !is.na(access_walk_30),
+    !is.na(access_cycle_20),
+    krig_value > 0,
+    access_walk_30 > 0,
+    access_cycle_20 > 0
+  ) %>%
+  mutate(
+    log_krig     = log1p(krig_value),
+    log_walk_30  = log1p(access_walk_30),
+    log_cycle_20 = log1p(access_cycle_20)
+  )
+
+p_krig <- plot_ly(compare_df,
+        x = ~log_krig, y = ~perc_active,
+        type = "scatter", mode = "markers",
+        marker = list(opacity = 0.3, color = "#e74c3c", size = 3),
+        text = ~paste("Kriging (log):", round(log_krig, 2),
+                      "<br>Active travel:", round(perc_active, 1), "%"),
+        hoverinfo = "text") %>%
+  layout(xaxis = list(title = "Kriging (log1p)"),
+         yaxis = list(title = "% active travel"),
+         title = "Kriging")
+
+p_walk <- plot_ly(compare_df,
+        x = ~log_walk_30, y = ~perc_active,
+        type = "scatter", mode = "markers",
+        marker = list(opacity = 0.3, color = "#2980b9", size = 3),
+        text = ~paste("Walk (log):", round(log_walk_30, 2),
+                      "<br>Active travel:", round(perc_active, 1), "%"),
+        hoverinfo = "text") %>%
+  layout(xaxis = list(title = "Walking 30 min (log1p)"),
+         yaxis = list(title = "% active travel"),
+         title = "r5r Walking")
+
+p_cycle <- plot_ly(compare_df,
+        x = ~log_cycle_20, y = ~perc_active,
+        type = "scatter", mode = "markers",
+        marker = list(opacity = 0.3, color = "#27ae60", size = 3),
+        text = ~paste("Cycle (log):", round(log_cycle_20, 2),
+                      "<br>Active travel:", round(perc_active, 1), "%"),
+        hoverinfo = "text") %>%
+  layout(xaxis = list(title = "Cycling 20 min (log1p)"),
+         yaxis = list(title = "% active travel"),
+         title = "r5r Cycling")
+
+subplot(p_krig, p_walk, p_cycle,
+        nrows = 1, shareY = TRUE, titleX = TRUE) %>%
+  layout(title = "Kriging vs Travel Time - Urban CSAs (log normalised)",
+         showlegend = FALSE)
+```
+
+
+
 
 ## Model
 
@@ -727,7 +737,6 @@ and school context**
 - Designed for continuous proportions between **0 and 1**.
 - Uses a **logit link** to keep predicted values inside the valid range.
 - Estimates both the relationship between variables and the uncertainty around those relationships.
-- Well suited for comparing **urban and rural** school travel patterns.
 :::
 
 ## Model: Implementation
@@ -824,39 +833,20 @@ p <- ggplot(
   labs(
     title = "Marginal Prediction for Kriging Value",
     subtitle = "Other predictors fixed at their average standardized value",
-    x = "Kriging value",
+    x = "Kriging value (density of school places per 100 students)",
     y = "Predicted active percentage"
   ) +
   theme_minimal(base_size = 12)
 
 ggplotly(p) %>%
   layout(
-    height = 480,
+    height = 520,
     margin = list(l = 70, r = 40, t = 80, b = 70)
   )
 ```
 
 
 
-## Model: Implementation
-
-```{r}
-#| echo: true
-#| eval: false
-
-model_urban_walk <- brm(
-  formula = formula_beta,
-  data    = df_urban_model,
-  family  = Beta(link = "logit"),
-  prior   = priors,
-  chains  = 4,
-  iter    = 4000,
-  warmup  = 1000,
-  seed    = 123,
-  cores   = 4,
-  control = list(adapt_delta = 0.95, max_treedepth = 15)
-)
-```
 
 ::: {.incremental}
 - The model is fitted separately for the **urban dataset**.
