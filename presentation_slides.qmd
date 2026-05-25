@@ -847,13 +847,6 @@ ggplotly(p) %>%
 
 
 
-
-::: {.incremental}
-- The model is fitted separately for the **urban dataset**.
-- Four chains and 4000 iterations improve posterior estimation.
-- `adapt_delta = 0.95` and `max_treedepth = 15` reduce sampling problems.
-- Walking accessibility is **log normalised** before modelling to handle skew.
-:::
 ## Model: Urban Results - Travel Time
 
 ```{r walk-marginal}
