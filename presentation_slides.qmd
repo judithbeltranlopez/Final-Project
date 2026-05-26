@@ -340,103 +340,6 @@ ggplotly(p) %>%
 ```
 
 
-## Kriging
-
-Kriging is a **spatial interpolation method** used to predict values at locations where we do not have observations.
-
-::: {.incremental}
-- It uses observed spatial data to estimate values at unsampled locations.
-- Predictions are based on **nearby observations** and their spatial correlation.
-- The spatial structure is described using a **variogram**.
-- Points closer to the prediction location usually receive more weight.
-- Kriging also provides a measure of **prediction uncertainty**.
-:::
-
-## Kriging
-
-
-
-```{r kriging-interactive-map}
-#| echo: false
-#| out-width: "95%"
-#| fig-align: "center"
-
-knitr::include_graphics("outputs/kriging_map_static.png")
-```
-
-## Travel Time
-
-Travel time is used to measure **spatial accessibility**: how easily students can reach schools from their residential areas.
-
-::: {.incremental}
-- Travel times are calculated using a **routable transport network**.
-- The method can include different modes, such as **walking, cycling, public transport, or driving**.
-- Accessibility depends on the **origin**, the **destination**, and the available transport network.
-- Time thresholds can be used to identify which schools are reachable within a given number of minutes.
-- These measures help connect school location with students’ real mobility opportunities.
-:::
-
-## Travel time - Walking and Cycling Accessibility Urban CSA
-
-```{r travel-time-boxplots}
-#| echo: false
-#| warning: false
-#| message: false
-#| out-width: "100%"
-
-library(ggplot2)
-library(dplyr)
-library(patchwork)
-
-access_walk  <- readRDS("DATA/access_walk_clean.rds")
-access_cycle <- readRDS("DATA/access_cycle_clean.rds")
-
-library(readr)
-library(stringr)
-
-urb_rural <- read_csv("data/SAPS_2022_Small_Area_UR_171024.csv") %>%
-  mutate(
-    category    = str_extract(UR_Category_Desc, "(?<=\\.).*"),
-    urban_rural = case_when(
-      category %in% c(" Cities", " Satellite Urban Towns", " Independent urban towns") ~ "Urban",
-      TRUE ~ "Rural"
-    ),
-    SA_PUB2022 = as.character(GEOGID)
-  ) %>%
-  select(SA_PUB2022, urban_rural) %>%
-  distinct()
-
-urban_csas <- urb_rural %>% filter(urban_rural == "Urban") %>% pull(SA_PUB2022)
-
-access_walk_urban <- access_walk %>%
-  mutate(SA_PUB2022 = as.character(id)) %>%
-  filter(SA_PUB2022 %in% urban_csas) %>%
-  mutate(accessibility_log = log1p(accessibility))
-
-access_cycle_urban <- access_cycle %>%
-  mutate(SA_PUB2022 = as.character(id)) %>%
-  filter(SA_PUB2022 %in% urban_csas) %>%
-  mutate(accessibility_log = log1p(accessibility))
-
-p_walk <- access_walk_urban %>%
-  filter(accessibility > 0) %>%
-  ggplot(aes(x = factor(cutoff), y = accessibility_log)) +
-  geom_boxplot(fill = "steelblue") +
-  labs(title = "Walking accessibility (log normalised)",
-       x = "Cutoff (minutes)", y = "School places reachable (log1p)") +
-  theme_minimal()
-
-p_cycle <- access_cycle_urban %>%
-  filter(accessibility > 0) %>%
-  ggplot(aes(x = factor(cutoff), y = accessibility_log)) +
-  geom_boxplot(fill = "darkorange") +
-  labs(title = "Cycling accessibility (log normalised)",
-       x = "Cutoff (minutes)", y = "School places reachable (log1p)") +
-  theme_minimal()
-
-p_walk + p_cycle
-```
-
 ## Final Dataset
 
 ```{r final-dataset-schema}
@@ -532,75 +435,29 @@ arrow_path(c(0.685, 0.77), c(0.48, 0.45))
 arrow_path(c(0.685, 0.77), c(0.24, 0.39))
 ```
 
-## Kriging Vs Travel Time
+## Kriging
 
-```{r krig-vs-travel}
+Kriging is a **spatial interpolation method** used to predict values at locations where we do not have observations.
+
+::: {.incremental}
+- It uses observed spatial data to estimate values at unsampled locations.
+- Predictions are based on **nearby observations** and their spatial correlation.
+- The spatial structure is described using a **variogram**.
+- Points closer to the prediction location usually receive more weight.
+- Kriging also provides a measure of **prediction uncertainty**.
+:::
+
+## Kriging
+
+
+
+```{r kriging-interactive-map}
 #| echo: false
-#| warning: false
-#| message: false
-#| out-width: "100%"
+#| out-width: "95%"
+#| fig-align: "center"
 
-library(plotly)
-
-final_df_complete <- readRDS("DATA/final_df_complete.rds")
-
-compare_df <- final_df_complete %>%
-  filter(
-    urban_rural == "Urban",
-    !is.na(perc_active),
-    !is.na(krig_value),
-    !is.na(access_walk_30),
-    !is.na(access_cycle_20),
-    krig_value > 0,
-    access_walk_30 > 0,
-    access_cycle_20 > 0
-  ) %>%
-  mutate(
-    log_krig     = log1p(krig_value),
-    log_walk_30  = log1p(access_walk_30),
-    log_cycle_20 = log1p(access_cycle_20)
-  )
-
-p_krig <- plot_ly(compare_df,
-        x = ~log_krig, y = ~perc_active,
-        type = "scatter", mode = "markers",
-        marker = list(opacity = 0.3, color = "#e74c3c", size = 3),
-        text = ~paste("Kriging (log):", round(log_krig, 2),
-                      "<br>Active travel:", round(perc_active, 1), "%"),
-        hoverinfo = "text") %>%
-  layout(xaxis = list(title = "Kriging (log1p)"),
-         yaxis = list(title = "% active travel"),
-         title = "Kriging")
-
-p_walk <- plot_ly(compare_df,
-        x = ~log_walk_30, y = ~perc_active,
-        type = "scatter", mode = "markers",
-        marker = list(opacity = 0.3, color = "#2980b9", size = 3),
-        text = ~paste("Walk (log):", round(log_walk_30, 2),
-                      "<br>Active travel:", round(perc_active, 1), "%"),
-        hoverinfo = "text") %>%
-  layout(xaxis = list(title = "Walking 30 min (log1p)"),
-         yaxis = list(title = "% active travel"),
-         title = "r5r Walking")
-
-p_cycle <- plot_ly(compare_df,
-        x = ~log_cycle_20, y = ~perc_active,
-        type = "scatter", mode = "markers",
-        marker = list(opacity = 0.3, color = "#27ae60", size = 3),
-        text = ~paste("Cycle (log):", round(log_cycle_20, 2),
-                      "<br>Active travel:", round(perc_active, 1), "%"),
-        hoverinfo = "text") %>%
-  layout(xaxis = list(title = "Cycling 20 min (log1p)"),
-         yaxis = list(title = "% active travel"),
-         title = "r5r Cycling")
-
-subplot(p_krig, p_walk, p_cycle,
-        nrows = 1, shareY = TRUE, titleX = TRUE) %>%
-  layout(title = "Kriging vs Travel Time - Urban CSAs (log normalised)",
-         showlegend = FALSE)
+knitr::include_graphics("outputs/kriging_map_static.png")
 ```
-
-
 
 
 ## Model
@@ -729,6 +586,224 @@ ggplotly(p) %>%
   )
 ```
 
+## Travel Time
+
+```{r travel-time-routes}
+#| echo: false
+#| warning: false
+#| message: false
+
+options(java.parameters = "-Xmx8G")
+library(r5r)
+library(sf)
+library(leaflet)
+library(dplyr)
+
+r5r_core <- r5r::build_network(data_path = "DATA")
+
+schools_sf <- readRDS("DATA/schools_sf.rds") %>%
+  st_transform(4326)
+
+destinations <- schools_sf %>%
+  mutate(
+    id  = as.character(roll_number),
+    lon = st_coordinates(.)[,1],
+    lat = st_coordinates(.)[,2]
+  ) %>%
+  st_drop_geometry() %>%
+  select(id, lon, lat, places) %>%
+  filter(lon > -9.15, lon < -8.90, lat > 53.20, lat < 53.35)
+
+origin <- data.frame(id = "origin", lon = -9.0489, lat = 53.2743)
+
+routes <- r5r::detailed_itineraries(
+  r5r_network   = r5r_core,
+  origins       = origin,
+  destinations  = destinations,
+  mode          = "WALK",
+  max_walk_time = 30,
+  verbose       = FALSE
+)
+
+r5r::stop_r5(r5r_core)
+
+routes_sf <- routes %>% st_as_sf() %>% filter(mode == "WALK")
+
+pal <- colorNumeric(
+  palette = c("#2ca25f", "#fed976", "#fd8d3c"),
+  domain  = routes_sf$total_duration
+)
+
+leaflet() %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolylines(
+    data    = routes_sf,
+    color   = ~pal(total_duration),
+    weight  = 3,
+    opacity = 0.9,
+    label   = ~paste0(round(total_duration, 1), " min walk"),
+    highlightOptions = highlightOptions(weight = 5, opacity = 1, bringToFront = TRUE)
+  ) %>%
+  addCircleMarkers(
+    data        = schools_sf %>% filter(as.character(roll_number) %in% destinations$id),
+    radius      = 6,
+    color       = "#9f1f55",
+    fillColor   = "#9f1f55",
+    fillOpacity = 0.9,
+    stroke      = FALSE,
+    popup       = ~paste0("<b>", name, "</b><br>Places: ", places)
+  ) %>%
+  addCircleMarkers(
+    lng = -9.0489, lat = 53.2743,
+    radius = 10, color = "black",
+    fillColor = "yellow", fillOpacity = 1,
+    popup = "Origin — CSA centroid"
+  ) %>%
+  addLegend(
+    pal = pal, values = routes_sf$total_duration,
+    title = "Walking time (min)", position = "bottomright"
+  ) %>%
+  setView(lng = -9.0489, lat = 53.2743, zoom = 14)
+```
+
+## Travel time - Walking and Cycling Accessibility Urban CSA
+
+```{r travel-time-boxplots}
+## Travel time - Walking and Cycling Accessibility Urban CSA
+#| echo: false
+#| warning: false
+#| message: false
+#| out-width: "100%"
+
+library(ggplot2)
+library(dplyr)
+library(patchwork)
+library(readr)
+library(stringr)
+
+access_walk  <- readRDS("DATA/access_walk_clean.rds")
+access_cycle <- readRDS("DATA/access_cycle_clean.rds")
+
+urb_rural <- read_csv("data/SAPS_2022_Small_Area_UR_171024.csv") %>%
+  mutate(
+    category    = str_extract(UR_Category_Desc, "(?<=\\.).*"),
+    urban_rural = case_when(
+      category %in% c(" Cities", " Satellite Urban Towns", " Independent urban towns") ~ "Urban",
+      TRUE ~ "Rural"
+    ),
+    SA_PUB2022 = as.character(GEOGID)
+  ) %>%
+  select(SA_PUB2022, urban_rural) %>%
+  distinct()
+
+urban_csas <- urb_rural %>% filter(urban_rural == "Urban") %>% pull(SA_PUB2022)
+
+access_walk_urban <- access_walk %>%
+  mutate(SA_PUB2022 = as.character(id)) %>%
+  filter(SA_PUB2022 %in% urban_csas) %>%
+  mutate(accessibility_log = log10(accessibility + 1))
+
+access_cycle_urban <- access_cycle %>%
+  mutate(SA_PUB2022 = as.character(id)) %>%
+  filter(SA_PUB2022 %in% urban_csas) %>%
+  mutate(accessibility_log = log10(accessibility + 1))
+
+p_walk <- access_walk_urban %>%
+  filter(accessibility > 0) %>%
+  ggplot(aes(x = factor(cutoff), y = accessibility_log)) +
+  geom_boxplot(fill = "red") +
+  scale_y_continuous(
+    breaks = c(1, 2, 3, 4),
+    labels = c("10", "100", "1,000", "10,000")
+  ) +
+  labs(title = "Walking accessibility",
+       x = "Cutoff (minutes)", y = "School places reachable") +
+  theme_minimal()
+
+p_cycle <- access_cycle_urban %>%
+  filter(accessibility > 0) %>%
+  ggplot(aes(x = factor(cutoff), y = accessibility_log)) +
+  geom_boxplot(fill = "red") +
+  scale_y_continuous(
+    breaks = c(1, 2, 3, 4),
+    labels = c("10", "100", "1,000", "10,000")
+  ) +
+  labs(title = "Cycling accessibility",
+       x = "Cutoff (minutes)", y = "School places reachable") +
+  theme_minimal()
+
+p_walk + p_cycle
+```
+
+## Kriging Vs Travel Time
+
+```{r krig-vs-travel}
+#| echo: false
+#| warning: false
+#| message: false
+#| out-width: "100%"
+
+library(plotly)
+library(dplyr)
+
+final_df_complete <- readRDS("DATA/final_df_complete.rds") %>%
+  sf::st_drop_geometry()
+
+compare_df <- final_df_complete %>%
+  filter(
+    urban_rural == "Urban",
+    !is.na(perc_active),
+    !is.na(krig_value),
+    !is.na(access_walk_30),
+    krig_value > 0,
+    access_walk_30 > 0
+  ) %>%
+  mutate(
+    log10_krig    = log10(krig_value     + 1),
+    log10_walk_30 = log10(access_walk_30 + 1)
+  )
+
+p_krig <- plot_ly(compare_df,
+        x = ~log10_krig, y = ~perc_active,
+        type = "scatter", mode = "markers",
+        marker = list(opacity = 0.3, color = "#e74c3c", size = 3),
+        text = ~paste("Kriging (log10):", round(log10_krig, 2),
+                      "<br>Active travel:", round(perc_active, 1), "%"),
+        hoverinfo = "text") %>%
+  layout(
+    xaxis = list(
+      title = "Kriging school place density",
+      tickvals = c(1, 2, 3),
+      ticktext = c("10", "100", "1,000")
+    ),
+    yaxis = list(title = "% active travel"),
+    title = "Kriging"
+  )
+
+p_walk <- plot_ly(compare_df,
+        x = ~log10_walk_30, y = ~perc_active,
+        type = "scatter", mode = "markers",
+        marker = list(opacity = 0.3, color = "#2980b9", size = 3),
+        text = ~paste("Walk (log10):", round(log10_walk_30, 2),
+                      "<br>Active travel:", round(perc_active, 1), "%"),
+        hoverinfo = "text") %>%
+  layout(
+    xaxis = list(
+      title = "School places reachable by walking",
+      tickvals = c(1, 2, 3, 4),
+      ticktext = c("10", "100", "1,000", "10,000")
+    ),
+    yaxis = list(title = "% active travel"),
+    title = "r5r Walking"
+  )
+
+subplot(p_krig, p_walk,
+        nrows = 1, shareY = TRUE, titleX = TRUE) %>%
+  layout(
+    title      = "Kriging vs Walking accessibility - Urban CSAs",
+    showlegend = FALSE
+  )
+```
 
 
 ## Model: Urban Results - Travel Time
@@ -745,18 +820,15 @@ library(dplyr)
 library(ggplot2)
 library(plotly)
 
-df_urban_model <- readRDS("DATA/df_urban_model_walk.rds")
+df_urban_model   <- readRDS("DATA/df_urban_model_walk.rds")
 model_urban_walk <- readRDS("DATA/model_urban_walk.rds")
-formula_beta <- readRDS("DATA/formula_beta_walk.rds")
+formula_beta     <- readRDS("DATA/formula_beta_walk.rds")
 
 model_predictors <- all.vars(formula_beta)[-1]
 
-walk_mean <- mean(df_urban_model$log_walk_30, na.rm = TRUE)
-walk_sd   <- sd(df_urban_model$log_walk_30,   na.rm = TRUE)
-
 walk_grid <- seq(
-  min(df_urban_model$z_log_walk_30, na.rm = TRUE),
-  max(df_urban_model$z_log_walk_30, na.rm = TRUE),
+  min(df_urban_model$log10_walk_30, na.rm = TRUE),
+  max(df_urban_model$log10_walk_30, na.rm = TRUE),
   length.out = 100
 )
 
@@ -766,38 +838,40 @@ newdata_walk <- as_tibble(
 names(newdata_walk) <- model_predictors
 
 newdata_walk <- newdata_walk %>%
-  mutate(
-    z_log_walk_30 = walk_grid,
-    walk_original = expm1(z_log_walk_30 * walk_sd + walk_mean)
-  )
+  mutate(log10_walk_30 = walk_grid)
 
 pred_walk <- fitted(
   model_urban_walk,
   newdata = newdata_walk,
   scale   = "response",
-  probs   = c(0.025, 0.975)
+  probs   = c(0.125, 0.875)
 )
 
 plot_walk <- bind_cols(newdata_walk, as_tibble(pred_walk)) %>%
   mutate(
     Estimate_pct = Estimate * 100,
-    Q2.5_pct     = Q2.5 * 100,
-    Q97.5_pct    = Q97.5 * 100
+    Q2.5_pct     = Q12.5 * 100,
+    Q97.5_pct    = Q87.5 * 100
   )
 
-p <- ggplot(plot_walk, aes(x = walk_original, y = Estimate_pct)) +
+p <- ggplot(plot_walk, aes(x = log10_walk_30, y = Estimate_pct)) +
   geom_ribbon(aes(ymin = Q2.5_pct, ymax = Q97.5_pct), alpha = 0.2) +
   geom_line(linewidth = 1) +
+  scale_x_continuous(
+    breaks = c(0, 1, 2, 3, 4),
+    labels = c("0", "10", "100", "1,000", "10,000")
+  ) +
   labs(
     title    = "Effect of walking accessibility on active travel",
     subtitle = "Other predictors fixed at their average standardised value",
     x        = "School places reachable by walking (30 min)",
-    y        = "Predicted active travel (%)"
+    y        = "Active travel (%)"
   ) +
   theme_minimal(base_size = 12)
 
 ggplotly(p) %>%
   layout(height = 480, margin = list(l = 70, r = 40, t = 80, b = 70))
+```
 ```
 
 ## Model: Improvements
