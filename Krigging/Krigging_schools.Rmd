@@ -308,49 +308,45 @@ ggplot(plot_df, aes(x = krig_value)) +
 ```
 
 ```{r}
-age_df <- read_csv("../data/SAPS_2022_Small_Area_UR_171024.csv")%>%
-  rename(SA_PUB2022 = GEOGID)
+age_df <- read_csv("../data/SAPS_2022_Small_Area_UR_171024.csv") %>%
+  rename(SA_PUB2022 = GEOGID) %>%
+  mutate(SA_PUB2022 = str_trim(as.character(SA_PUB2022)))
 
 to_num <- function(x) {
   if (is.numeric(x)) return(as.numeric(x))
   readr::parse_number(as.character(x))
 }
 
-
+# Exact target population: people aged 3 to 18 in each Small Area
 target_ages <- 3:18
 
 target_cols <- paste0("T1_1AGE", target_ages, "T")
 target_cols <- intersect(target_cols, names(age_df))
-stopifnot(length(target_cols) > 0)
 
+stopifnot(length(target_cols) == length(target_ages))
 
-age_norm_target <- age_df %>%
+age_target <- age_df %>%
   mutate(across(all_of(target_cols), to_num)) %>%
-  mutate(across(
-    all_of(target_cols),
-    ~ {
-      denom <- sum(.x, na.rm = TRUE)     # column total across all Small Areas
-      if (is.na(denom) || denom == 0) NA_real_ else .x / denom
-    },
-    .names = "{.col}_share"
-  )) %>%
   transmute(
     SA_PUB2022,
-    # normalised target pop = sum of the normalised (share) columns
-    target_pop_norm = rowSums(across(ends_with("_share")), na.rm = TRUE)
+    pop_3_18 = rowSums(across(all_of(target_cols)), na.rm = TRUE)
   )
 
 sa_full_norm <- sa_with_krig_ur %>%
   mutate(SA_PUB2022 = str_trim(as.character(SA_PUB2022))) %>%
-  left_join(age_norm_target, by = "SA_PUB2022") %>%
+  left_join(age_target, by = "SA_PUB2022") %>%
   st_transform(2157) %>%
   mutate(
     area_km2 = as.numeric(st_area(geometry)) / 1e6,
-    # density from kriging value (per km²)
+
+    # Kriging value per km²
     places_density_km2 = krig_value / area_km2,
-    # NORMALISED by target_pop_norm
-    dens_norm = places_density_km2 / target_pop_norm,
-    dens_norm_per_100 = 100 * dens_norm
+
+    # Normalised by the actual number of people aged 3-18 in the Small Area
+    krig_density_per_child_3_18 = places_density_km2 / pop_3_18,
+
+    # More interpretable version: kriging density per 1,000 people aged 3-18
+    krig_density_per_1000_3_18 = 1000 * krig_density_per_child_3_18
   )
 ```
 
@@ -360,23 +356,22 @@ plot_df_norm <- sa_full_norm %>%
   st_drop_geometry() %>%
   filter(
     !is.na(urban_rural),
-    is.finite(dens_norm_per_100),
-    dens_norm_per_100 > 0,
-    is.finite(target_pop_norm),
-    target_pop_norm > 0
+    is.finite(krig_density_per_1000_3_18),
+    krig_density_per_1000_3_18 > 0,
+    is.finite(pop_3_18),
+    pop_3_18 > 0
   )
 
-ggplot(plot_df_norm, aes(x = dens_norm_per_100)) +
+ggplot(plot_df_norm, aes(x = krig_density_per_1000_3_18)) +
   geom_histogram(bins = 30) +
   scale_x_log10() +
   facet_wrap(~ urban_rural, ncol = 1, scales = "free_y") +
   labs(
     title = paste0(
-      "School place density (kriging) normalised by target population (ages ",
-      min(target_ages), "–", max(target_ages), ")\n",
-      "Target population normalised by COLUMN totals"
+      "School place density from kriging normalised by population aged ",
+      min(target_ages), "–", max(target_ages)
     ),
-    x = "Normalised density × 100 (log10 scale)",
+    x = "Kriging density per 1,000 people aged 3–18 (log10 scale)",
     y = "Count of Small Areas"
   ) +
   theme_bw()
@@ -399,25 +394,34 @@ saps <- read_csv("../data/SAPS_2022_Small_Area_UR_171024.csv") %>%
 ######Join
 scatter_df <- sa_full_norm %>%
   st_drop_geometry() %>%
-  mutate(SA_PUB2022 = as.character(SA_PUB2022)) %>%
-  left_join(saps %>% select(SA_PUB2022, perc_active), by = "SA_PUB2022") %>%
+  mutate(SA_PUB2022 = str_trim(as.character(SA_PUB2022))) %>%
+  left_join(
+    saps %>% 
+      mutate(SA_PUB2022 = str_trim(as.character(SA_PUB2022))) %>%
+      select(SA_PUB2022, perc_active),
+    by = "SA_PUB2022"
+  ) %>%
   filter(
     !is.na(urban_rural),
     !is.na(perc_active),
-    is.finite(krig_value), krig_value > 0,
-    is.finite(dens_norm_per_100), dens_norm_per_100 > 0
+    is.finite(krig_value), 
+    krig_value > 0,
+    is.finite(pop_3_18),
+    pop_3_18 > 0,
+    is.finite(krig_density_per_1000_3_18),
+    krig_density_per_1000_3_18 > 0
   )
 ```
 
 ```{r}
-ggplot(scatter_df, aes(x = krig_value, y = perc_active, colour = urban_rural)) +
+ggplot(scatter_df, aes(x = krig_density_per_1000_3_18, y = perc_active, colour = urban_rural)) +
   geom_point(alpha = 0.05) +
   scale_x_log10(labels = scales::comma) +
   scale_colour_manual(values = c("Urban" = "red", "Rural" = "blue")) +
   labs(
-    title = "School place density vs Active travel",
-    x = "School place density",
-    y = "percentage of walking and cycling to education",
+    title = "Normalised school place density vs active travel",
+    x = "Kriging density per 1,000 people aged 3–18",
+    y = "Percentage walking and cycling to education",
     colour = "Area type"
   ) +
   theme_minimal()

@@ -201,6 +201,97 @@ res_sa <- run_sa_3x3_kriging(
   nmax = 150
 )
 ```
+```{r}
+# ---------------------------------------------------------
+# Normalise kriging by population aged 3-18
+# ---------------------------------------------------------
+
+to_num <- function(x) {
+  if (is.numeric(x)) return(as.numeric(x))
+  readr::parse_number(as.character(x))
+}
+
+# Read SAPS age data
+age_df <- read_csv("../data/SAPS_2022_Small_Area_UR_171024.csv") %>%
+  mutate(
+    GEOGID = str_trim(as.character(GEOGID)),
+    SA_PUB2022 = GEOGID
+  )
+
+# Columns for exact ages 3 to 18
+target_ages <- 3:18
+target_cols <- paste0("T1_1AGE", target_ages, "T")
+
+missing_age_cols <- setdiff(target_cols, names(age_df))
+
+if (length(missing_age_cols) > 0) {
+  stop(
+    "Missing age columns in SAPS file: ",
+    paste(missing_age_cols, collapse = ", ")
+  )
+}
+
+# Match Small Area ID between kriging output and SAPS
+age_id_candidates <- c(sa_id, "SA_PUB2022", "GEOGID")
+age_id <- age_id_candidates[age_id_candidates %in% names(age_df)][1]
+
+if (is.na(age_id)) {
+  stop("No matching Small Area ID found between kriging data and SAPS data.")
+}
+
+# Compute real population aged 3-18 per Small Area
+age_target <- age_df %>%
+  mutate(across(all_of(target_cols), to_num)) %>%
+  transmute(
+    join_id = str_trim(as.character(.data[[age_id]])),
+    pop_3_18 = rowSums(across(all_of(target_cols)), na.rm = TRUE)
+  ) %>%
+  distinct(join_id, .keep_all = TRUE)
+
+# Add normalised kriging variables
+res_sa$sa_with_krig <- res_sa$sa_with_krig %>%
+  mutate(
+    join_id = str_trim(as.character(.data[[sa_id]]))
+  ) %>%
+  left_join(age_target, by = "join_id") %>%
+  st_transform(2157) %>%
+  mutate(
+    area_km2 = as.numeric(st_area(geometry)) / 1e6,
+
+    # Kriging value per km²
+    places_density_km2 = krig_value / area_km2,
+
+    # Normalised by actual population aged 3-18
+    krig_density_per_child_3_18 = if_else(
+      is.finite(pop_3_18) & pop_3_18 > 0,
+      places_density_km2 / pop_3_18,
+      NA_real_
+    ),
+
+    # More interpretable version
+    krig_density_per_1000_3_18 = 1000 * krig_density_per_child_3_18,
+
+    # Scaled version for modelling
+    krig_density_per_1000_3_18_z =
+      as.numeric(scale(krig_density_per_1000_3_18))
+  ) %>%
+  select(-join_id)
+
+# Quick check
+res_sa$sa_with_krig %>%
+  st_drop_geometry() %>%
+  summarise(
+    n_small_areas = n(),
+    missing_krig = sum(is.na(krig_value)),
+    missing_pop_3_18 = sum(is.na(pop_3_18)),
+    zero_pop_3_18 = sum(pop_3_18 == 0, na.rm = TRUE),
+    min_pop_3_18 = min(pop_3_18, na.rm = TRUE),
+    max_pop_3_18 = max(pop_3_18, na.rm = TRUE),
+    min_krig_norm = min(krig_density_per_1000_3_18, na.rm = TRUE),
+    max_krig_norm = max(krig_density_per_1000_3_18, na.rm = TRUE)
+  )
+```
+
 
 ```{r}
 ggplot(res_sa$sa_with_krig |> st_drop_geometry(), aes(x = krig_value)) +
