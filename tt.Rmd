@@ -1,0 +1,81 @@
+```{r isochrone-map}
+#| echo: false
+#| warning: false
+#| message: false
+
+options(java.parameters = "-Xmx4G")
+library(r5r)
+library(sf)
+library(leaflet)
+library(dplyr)
+
+# Build network
+r5r_core <- r5r::build_network(data_path = "D:/Final-Project/DATA")
+
+# Pick one school in Galway city centre as the focal point
+schools_sf <- readRDS("D:/Final-Project/DATA/schools_sf.rds") %>%
+  st_transform(4326)
+
+# Use one central Galway school as origin
+origin <- data.frame(
+  id  = "school",
+  lon = -9.0568,
+  lat = 53.2707
+)
+
+# Calculate isochrones
+iso <- r5r::isochrone(
+  r5r_core = r5r_core,
+  origins  = origin,
+  mode     = "WALK",
+  cutoffs  = c(10, 20, 30)
+)
+
+r5r::stop_r5(r5r_core)
+
+# Colours per zone
+pal <- colorFactor(
+  palette = c("#2ca25f", "#fed976", "#fd8d3c"),
+  levels  = c(10, 20, 30)
+)
+
+# Map
+leaflet() %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+
+  # Travel time zones
+  addPolygons(
+    data        = iso,
+    fillColor   = ~pal(cutoff),
+    fillOpacity = 0.5,
+    color       = "white",
+    weight      = 1,
+    label       = ~paste0("Within ", cutoff, " min walk"),
+    highlightOptions = highlightOptions(
+      fillOpacity = 0.8,
+      bringToFront = TRUE
+    )
+  ) %>%
+
+  # Focal school
+  addCircleMarkers(
+    lng         = -9.0568,
+    lat         = 53.2707,
+    radius      = 10,
+    color       = "#9f1f55",
+    fillColor   = "#9f1f55",
+    fillOpacity = 1,
+    stroke      = TRUE,
+    weight      = 2,
+    popup       = "Focal school — origin point"
+  ) %>%
+
+  addLegend(
+    colors   = c("#2ca25f", "#fed976", "#fd8d3c"),
+    labels   = c("0–10 min", "10–20 min", "20–30 min"),
+    title    = "Walking time from school",
+    position = "bottomright"
+  ) %>%
+
+  setView(lng = -9.0568, lat = 53.2707, zoom = 14)
+```
