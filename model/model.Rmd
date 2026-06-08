@@ -14,64 +14,95 @@ library(compositions)
 ```
 
 ```{r}
-model_df <- final_df%>%
+final_df <- readRDS("../outputs/final_df.rds")
+
+model_df <- final_df %>%
   sf::st_drop_geometry()
 
+# Focus on URBAN DATA
+df_urban <- model_df %>%
+  filter(urban_rural %in% "Urban")
 
-## Focus on URBAN DATA:
-df_urban <- model_df%>%filter(urban_rural%in%"Urban")
+# ============================================================
+# 1. ILR transformation for demographic composition variables
+# ============================================================
 
-## Log transformations to demographic variables
-cols <- c("pct_0_12","pct_13_21","pct_22_40","pct_41_70", "pct_71plus", "pct_0car","pct_1car","pct_2plus","pct_none_primary","pct_secondary","pct_tertiary","pct_still_in_edu")
+cols <- c(
+  "pct_0_12",
+  "pct_13_21",
+  "pct_22_40",
+  "pct_41_70",
+  "pct_71plus",
+  "pct_0car",
+  "pct_1car",
+  "pct_2plus",
+  "pct_none_primary",
+  "pct_secondary",
+  "pct_tertiary",
+  "pct_still_in_edu"
+)
 
-matrix_urban <- df_urban%>%select(all_of(cols))%>%as.matrix()
+# Check that all variables exist
+missing_cols <- setdiff(cols, names(df_urban))
+
+if (length(missing_cols) > 0) {
+  stop(
+    "These ILR variables are missing from the new dataset:\n",
+    paste(missing_cols, collapse = ", ")
+  )
+}
+
+# Small replacement for zeros before compositional transformation
+# ILR cannot handle exact zeros.
+df_urban <- df_urban %>%
+  mutate(
+    across(
+      all_of(cols),
+      ~ ifelse(is.na(.x), NA_real_, .x)
+    )
+  )
+
+matrix_urban <- df_urban %>%
+  select(all_of(cols)) %>%
+  as.matrix()
+
+# Replace zeros with small positive value
+matrix_urban[matrix_urban == 0] <- 0.001
 
 variables_ilr <- ilr(acomp(matrix_urban))
 
 variables_ilr_df <- as.data.frame(variables_ilr)
 
-names(variables_ilr_df) <- paste0("ilr","_", cols[-length(cols)])
+names(variables_ilr_df) <- paste0("ilr_", cols[-length(cols)])
 
-df_urban_model <- df_urban%>%select(-all_of(cols))%>%bind_cols(variables_ilr_df)
+df_urban_model <- df_urban %>%
+  select(-all_of(cols)) %>%
+  bind_cols(variables_ilr_df)
 
 
 
-# 1. Prepare data:
+# ============================================================
+# 2. Prepare modelling variables
+# ============================================================
 
-df_urban_model <- df_urban_model%>%
-  mutate(
-    category = factor(category),
-    county = factor(COUNTY_ENGLISH),
-    urban_area = factor(SA_URBAN_AREA_NAME),
-    log_places_density = log1p(places_density_km2),
-    log_area = log1p(area_km2),
-    z_log_places_density = as.numeric(scale(log_places_density)),
-    z_log_area = as.numeric(scale(log_area)),
-    z_target_pop_norm = as.numeric(scale(target_pop_norm)),
-    krig_se = sqrt(krig_var)
-  ) %>%
-  filter(
-    !is.na(krig_value),
-    !is.na(category),
-    !is.na(z_log_places_density),
-    !is.na(z_log_area),
-    !is.na(z_target_pop_norm),
-    !is.na(county),
-    !is.na(urban_area)
-  ) %>%
-  droplevels()
-```
 
-```{r}
-ilr_vars <- names(df_urban_model) %>% 
-  keep(~ str_starts(.x, "ilr_"))
-
+# Beta regression response must be strictly between 0 and 1
 df_urban_model <- df_urban_model %>%
   mutate(
     perc_active_prop = perc_active / 100,
-    perc_active_beta = (perc_active_prop * (nrow(.) - 1) + 0.5) / nrow(.),
-    krig_value_z = as.numeric(scale(krig_value))
-  ) %>%
+    perc_active_beta = (perc_active_prop * (nrow(.) - 1) + 0.5) / nrow(.)
+  )
+```
+
+```{r}
+# ============================================================
+# 3. Standardize ILR variables
+# ============================================================
+
+ilr_vars <- names(df_urban_model) %>%
+  keep(~ str_starts(.x, "ilr_"))
+
+df_urban_model <- df_urban_model %>%
   mutate(
     across(
       all_of(ilr_vars),
@@ -80,34 +111,69 @@ df_urban_model <- df_urban_model %>%
     )
   )
 
-predictors <- c(
-  paste0("z_", ilr_vars),
-  "krig_value_z",
-  "z_log_places_density"
+z_ilr_vars <- paste0("z_", ilr_vars)
+
+# ============================================================
+# 4. Model formula with splines
+# ============================================================
+
+# Linear ILR terms
+linear_predictors <- z_ilr_vars
+
+# Spline terms for kriging and density
+spline_terms <- c(
+  "s(krig_value, k = 5)",
+  "s(places_density_km2, k = 5)"
 )
 
 formula_beta <- as.formula(
-  paste("perc_active_beta ~", paste(predictors, collapse = " + "))
+  paste(
+    "perc_active_beta ~",
+    paste(c(linear_predictors, spline_terms), collapse = " + ")
+  )
 )
+
+formula_beta
+
+# ============================================================
+# 5. Priors
+# ============================================================
 
 priors <- c(
   prior(normal(0, 1), class = "b"),
   prior(normal(0, 2.5), class = "Intercept"),
-  prior(exponential(1), class = "phi")
+  prior(exponential(1), class = "phi"),
+
+  # Prior for spline smoothness
+  prior(exponential(1), class = "sds")
 )
 
-# shape model
+get_prior(
+  formula = formula_beta,
+  data = df_urban_model,
+  family = Beta(link = "logit")
+)
+
+# ============================================================
+# 6. Fit Bayesian beta regression model with splines
+# ============================================================
+
 model_urban_krig <- brm(
   formula = formula_beta,
   data = df_urban_model,
-  family = Beta(link = "logit"), # the brm will be modelling the mean 
+  family = Beta(link = "logit"),
   prior = priors,
   chains = 4,
   iter = 4000,
   warmup = 1000,
   seed = 123,
-  control = list(adapt_delta = 0.95)
+  cores = 4,
+  control = list(
+    adapt_delta = 0.97,
+    max_treedepth = 12
+  )
 )
+
 ```
 
 ```{r}
@@ -117,17 +183,79 @@ plot(model_urban_krig)
 
 ```{r}
 
+# ============================================================
+# 8. Convergence checks
+# ============================================================
+
+draws_summary <- posterior::summarise_draws(model_urban_krig)
+
+rhat_bad <- draws_summary %>%
+  filter(!is.na(rhat), rhat > 1.01)
+
+ess_bad <- draws_summary %>%
+  filter(
+    !is.na(ess_bulk),
+    !is.na(ess_tail),
+    ess_bulk < 400 | ess_tail < 400
+  )
+
+nuts <- nuts_params(model_urban_krig)
+
+n_divergent <- nuts %>%
+  filter(Parameter == "divergent__") %>%
+  summarise(n = sum(Value)) %>%
+  pull(n)
+
+n_treedepth <- nuts %>%
+  filter(Parameter == "treedepth__") %>%
+  summarise(n = sum(Value >= 12)) %>%
+  pull(n)
+
+convergence_report <- tibble(
+  check = c(
+    "Rhat <= 1.01",
+    "Bulk and Tail ESS >= 400",
+    "No divergent transitions",
+    "No max treedepth hits"
+  ),
+  passed = c(
+    nrow(rhat_bad) == 0,
+    nrow(ess_bad) == 0,
+    n_divergent == 0,
+    n_treedepth == 0
+  ),
+  problem = c(
+    paste(rhat_bad$variable, collapse = ", "),
+    paste(ess_bad$variable, collapse = ", "),
+    as.character(n_divergent),
+    as.character(n_treedepth)
+  )
+)
+
+convergence_report
+
+# More diagnostic plots
+mcmc_plot(model_urban_krig, type = "trace")
+mcmc_plot(model_urban_krig, type = "rhat")
+mcmc_plot(model_urban_krig, type = "neff")
+
+```
+
+```{r}
+# ============================================================
+# 9. Marginal prediction for krig_value spline
+# ============================================================
+
 model_predictors <- all.vars(formula_beta)[-1]
 
 krig_mean <- mean(df_urban_model$krig_value, na.rm = TRUE)
 krig_sd <- sd(df_urban_model$krig_value, na.rm = TRUE)
 
 krig_grid <- seq(
-  min(df_urban_model$krig_value_z, na.rm = TRUE),
-  max(df_urban_model$krig_value_z, na.rm = TRUE),
+  quantile(df_urban_model$krig_value_z, 0.01, na.rm = TRUE),
+  quantile(df_urban_model$krig_value_z, 0.99, na.rm = TRUE),
   length.out = 100
 )
-
 
 newdata_krig <- as_tibble(
   matrix(0, nrow = length(krig_grid), ncol = length(model_predictors))
@@ -162,75 +290,9 @@ ggplot(plot_krig, aes(x = krig_value_original, y = Estimate_pct)) +
   geom_ribbon(aes(ymin = Q2.5_pct, ymax = Q97.5_pct), alpha = 0.2) +
   geom_line(linewidth = 1) +
   labs(
-    title = "Marginal prediction for krig_value",
-    subtitle = "Other predictors fixed at their average standardized value",
-    x = "krig_value",
-    y = "Predicted active percentage"
-  ) +
-  theme_minimal(base_size = 13)
-
-```
-
-```{r}
-# Coefficient table
-coef_df <- as.data.frame(fixef(model_urban_krig, probs = c(0.05, 0.95))) %>%
-  rownames_to_column("term") %>%
-  filter(term != "Intercept")
-
-# Select strongest ILR variables
-top_ilrs <- coef_df %>%
-  filter(str_starts(term, "z_ilr_")) %>%
-  mutate(abs_estimate = abs(Estimate)) %>%
-  slice_max(abs_estimate, n = 6) %>%
-  pull(term)
-
-make_ilr_plot_data <- function(var_name) {
-  
-  var_grid <- seq(
-    quantile(df_urban_model[[var_name]], 0.01, na.rm = TRUE),
-    quantile(df_urban_model[[var_name]], 0.99, na.rm = TRUE),
-    length.out = 80
-  )
-  
-  newdata <- as_tibble(
-    matrix(0, nrow = length(var_grid), ncol = length(model_predictors))
-  )
-  
-  names(newdata) <- model_predictors
-  
-  newdata[[var_name]] <- var_grid
-  
-  pred <- fitted(
-    model_urban_krig,
-    newdata = newdata,
-    scale = "response",
-    probs = c(0.025, 0.975)
-  )
-  
-  bind_cols(
-    newdata,
-    as_tibble(pred)
-  ) %>%
-    mutate(
-      variable = var_name,
-      variable_clean = str_replace(var_name, "^z_ilr_", "ilr_"),
-      x_value = .data[[var_name]],
-      Estimate_pct = Estimate * 100,
-      Q2.5_pct = Q2.5 * 100,
-      Q97.5_pct = Q97.5 * 100
-    )
-}
-
-plot_ilr_data <- map_dfr(top_ilrs, make_ilr_plot_data)
-
-ggplot(plot_ilr_data, aes(x = x_value, y = Estimate_pct)) +
-  geom_ribbon(aes(ymin = Q2.5_pct, ymax = Q97.5_pct), alpha = 0.2) +
-  geom_line(linewidth = 0.9) +
-  facet_wrap(~ variable_clean, scales = "free_x") +
-  labs(
-    title = "Marginal predictions for strongest ILR variables",
-    subtitle = "Other predictors fixed at their average standardized value",
-    x = "Standardized ILR value",
+    title = "Spline effect of kriged school accessibility",
+    subtitle = "Other predictors fixed at their standardized average value",
+    x = "Kriged school accessibility",
     y = "Predicted active percentage"
   ) +
   theme_minimal(base_size = 13)
@@ -241,7 +303,6 @@ dir.create("data2", showWarnings = FALSE)
 dir.create("models", showWarnings = FALSE)
 
 saveRDS(df_urban_model, "data2/df_urban_model.rds")
-saveRDS(model_urban_krig, "models/model_urban_krig.rds")
-saveRDS(formula_beta, "models/formula_beta.rds")
-saveRDS(urb_rural_df, "data2/urb_rural_df.rds")
+saveRDS(model_urban_krig, "models/model_urban_krig_splines.rds")
+saveRDS(formula_beta, "models/formula_beta_splines.rds")
 ```
