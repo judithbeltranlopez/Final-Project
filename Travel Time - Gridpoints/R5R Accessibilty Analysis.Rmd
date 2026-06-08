@@ -1,0 +1,212 @@
+---
+title: "r5r Grid Points Accessibility"
+author: "Sananthaa J S"
+date: "2026-06-08"
+output: html_document
+---
+
+```{r }
+options(java.parameters = "-Xmx8G") #java memory
+
+library(r5r)
+library(sf)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(readr)
+```
+
+```{r }
+#creates a 3x3 grid of points inside each Small Area polygon
+#used grid points
+
+make_sa_3x3_points <- function(sa, n_side = 3) {sa <- st_make_valid(sa)
+purrr::map_dfr(seq_len(nrow(sa)), function(i) 
+  {poly <- sa[i, ]
+# Create a 3x3 grid of cells over this small area's bounding box
+  g <- st_make_grid(poly, n=c(n_side, n_side), what="polygons")
+  g <- st_sf(local_cell_id=seq_along(g),geometry = g,crs=st_crs(sa))
+# Clip grid cells to the actual small area boundary
+  clipped <- suppressWarnings(st_intersection(g, poly %>% select(SA_PUB2022)))
+  clipped <- clipped %>%
+    st_make_valid() %>%
+    filter(!st_is_empty(geometry)) %>%
+    mutate(area_w = as.numeric(st_area(geometry))) %>%
+    filter(area_w > 0)
+  if (nrow(clipped) == 0) return(NULL)
+# Get one point guaranteed to be inside each grid cell
+  pts <- st_point_on_surface(clipped)
+  pts %>%
+    mutate(point_id = paste0(SA_PUB2022, "_", local_cell_id))})
+}
+```
+
+```{r}
+# Loading small area boundaries for all of Ireland
+# define the areas we want to calculate accessibility for
+sa <- st_read("data/Small_Area_National_Statistical_Boundaries_2022.geojson",quiet = TRUE) %>%
+  st_make_valid() %>%
+  st_transform(4326) %>%
+  mutate(SA_PUB2022 = as.character(SA_PUB2022))
+cat("Small areas loaded:", nrow(sa), "\n")
+```
+
+```{r}
+# 3x3 grid points inside every small area
+# Around 18,000 SA x 9 points = Around 160,000 
+cat("Creating grid points - this will take several minutes...\n")
+grid_pts <- make_sa_3x3_points(sa, n_side = 3)
+cat("Total grid points created:", nrow(grid_pts), "\n")
+saveRDS(grid_pts, "DATA/sa_grid_points.rds")
+```
+
+```{r}
+# Convert grid points to the r5r format r5r the id lat lon
+# keep SA_PUB2022 so we can aggregate back to small area level later
+origins <- grid_pts %>%
+  mutate(id  = point_id,lon = st_coordinates(.)[, 1],lat = st_coordinates(.)[, 2]) %>%
+  st_drop_geometry() %>%
+  select(id, lon, lat, SA_PUB2022) %>%
+  filter(!is.na(lon), !is.na(lat))
+
+cat("Origins prepared:", nrow(origins), "\n")
+```
+
+```{r }
+# Load schools as destinations
+# r5r needs: id, lon, lat, and the column (places)
+destinations <- readRDS("DATA/schools_sf.rds") %>%
+  st_transform(4326) %>%
+  mutate(id  = as.character(roll_number),lon = st_coordinates(.)[, 1],lat = st_coordinates(.)[, 2]) %>%
+  st_drop_geometry() %>%
+  select(id, lon, lat, places) %>%
+  filter(!is.na(lon), !is.na(lat), !is.na(places))
+
+cat("Schools prepared:", nrow(destinations), "\n")
+```
+
+```{r }
+# Build the r5r transport network from the OSM file in DATA folder
+cat("Building r5r network...\n")
+r5r_network <- r5r::build_network(data_path = "D:/Final-Project/DATA")
+cat("Network ready\n")
+```
+
+```{r}
+# Calculate how many school places can be reached by walking
+# from each grid point within 10, 20 and 30 minutes
+# decay = step means all places within the cutoff count equally
+access_walk_grid <- r5r::accessibility(
+  r5r_network            = r5r_network,
+  origins                = origins,
+  destinations           = destinations,
+  opportunities_colnames = "places",
+  mode                   = "WALK",
+  max_walk_time          = 30,
+  decay_function         = "step",
+  cutoffs                = c(10, 20, 30)
+)
+saveRDS(access_walk_grid, "DATA/access_walk_grid_raw.rds")
+cat("Walking accessibility saved\n")
+```
+
+```{r}
+r5r::stop_r5(r5r_network)
+cat("r5r stopped\n")
+```
+
+```{r}
+# Average the grid point values back to one value per small area per cutoff
+# Add SA_PUB2022 back using the origins look up
+origins_lookup <- origins %>% select(id, SA_PUB2022)
+# Walking average across grid points then pivot wide
+walk_wide <- access_walk_grid %>%
+  left_join(origins_lookup, by = "id") %>%
+  group_by(SA_PUB2022, cutoff) %>%
+  summarise(accessibility = mean(accessibility, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(
+    names_from   = cutoff,
+    values_from  = accessibility,
+    names_prefix = "access_walk_"
+  )
+cat("Walking aggregated, rows:", nrow(walk_wide), "\n")
+```
+
+```{r}
+# Load the existing final dataset
+# with the new grid-point based values
+final_df <- readRDS("DATA/final_df_complete.rds") %>%
+  sf::st_drop_geometry() %>%
+  mutate(SA_PUB2022 = as.character(SA_PUB2022))
+
+# Removing columns
+old_cols <- c("access_walk_10", "access_walk_20", "access_walk_30")
+
+final_df_updated <- final_df %>%
+  select(-any_of(old_cols)) %>%
+  left_join(walk_wide, by = "SA_PUB2022")
+
+cat("Rows:", nrow(final_df_updated), "\n")
+cat("Columns:", ncol(final_df_updated), "\n")
+```
+
+```{r }
+# Quick checks to make sure the new values look sensible
+cat("Walking 30 min summary:\n")
+print(summary(final_df_updated$access_walk_30))
+cat("Missing values:", sum(is.na(final_df_updated$access_walk_30)), "\n")
+```
+
+```{r}
+saveRDS(final_df_updated, "DATA/final_df_complete.rds")
+cat("Saved DATA/final_df_complete.rds\n")
+```
+
+```{r}
+#Checking the grid points look right spatially
+# Pickinh one small area and plot its griid points
+library(ggplot2)
+library(sf)
+
+# Pick one urban small area to check
+test_sa <- sa %>% filter(SA_PUB2022 == sa$SA_PUB2022[100])
+test_pts <- grid_pts %>% filter(SA_PUB2022 == sa$SA_PUB2022[100])
+
+ggplot() +
+  geom_sf(data = test_sa, fill = "lightblue", alpha = 0.5) +
+  geom_sf(data = test_pts, color = "red", size = 3) +
+  labs(title = "Grid points inside one Small Area",
+       subtitle = paste("SA:", sa$SA_PUB2022[100])) +
+  theme_minimal()
+```
+
+```{r}
+#Check how many grid points per small area
+grid_pts %>%
+  st_drop_geometry() %>%
+  count(SA_PUB2022) %>%
+  summary()
+```
+
+```{r}
+final_df_updated %>%
+  filter(urban_rural == "Rural") %>%
+  summarise(
+    n           = n(),
+    median_walk = median(access_walk_30, na.rm = TRUE),
+    mean_walk   = mean(access_walk_30, na.rm = TRUE),
+    missing     = sum(is.na(access_walk_30))
+  )
+
+```
+
+```{r}
+final_df_updated %>%
+  filter(urban_rural == "Rural") %>%
+  summarise(
+    n           = n(),
+    median_walk = median(access_walk_30, na.rm = TRUE),
+    mean_walk   = mean(access_walk_30, na.rm = TRUE),
+    missing     = sum(is.na(access_walk_30))
+  )
+```
