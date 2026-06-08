@@ -1,0 +1,217 @@
+---
+title: "r5r Urban Analysis"
+author: "Sananthaa J S"
+date: "2026-05-18"
+output: html_document
+---
+
+```{r }
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(stringr)
+library(patchwork)
+library(plotly)
+
+```
+
+```{r }
+access_walk  <- readRDS("D:/Final-Project/DATA/access_walk_clean.rds")
+access_cycle <- readRDS("D:/Final-Project/DATA/access_cycle_clean.rds")
+
+saps_active <- read_csv("D:/Final-Project/data/SAPS_2022_Small_Area_UR_171024.csv") %>%
+  filter(T1_1AGETT <= 950) %>%
+  mutate(
+    SA_PUB2022  = as.character(GEOGID),
+    denom       = T11_1_TSCCC - T11_1_WMFHSCCC - T11_1_NSSCCC,
+    perc_active = ifelse(denom > 0,
+                         100 * (T11_1_FSCCC + T11_1_BISCCC) / denom,
+                         NA_real_)
+  ) %>%
+  select(SA_PUB2022, perc_active)
+
+urb_rural <- read_csv("D:/Final-Project/data/SAPS_2022_Small_Area_UR_171024.csv") %>%
+  mutate(
+    category    = str_extract(UR_Category_Desc, "(?<=\\.).*"),
+    urban_rural = case_when(
+      category %in% c(" Cities", " Satellite Urban Towns", " Independent urban towns") ~ "Urban",
+      category %in% c(" Rural areas with high urban influence",
+                      " Rural areas with moderate urban influence",
+                      " Highly rural/remote areas") ~ "Rural",
+      TRUE ~ NA_character_
+    ),
+    SA_PUB2022 = as.character(GEOGID)
+  ) %>%
+  select(SA_PUB2022, urban_rural) %>%
+  distinct()
+
+cat("Walk rows:", nrow(access_walk), "\n")
+cat("Cycle rows:", nrow(access_cycle), "\n")
+```
+
+```{r filter-urban}
+urban_csas <- urb_rural %>%
+  filter(urban_rural == "Urban") %>%
+  pull(SA_PUB2022)
+
+access_walk_urban <- access_walk %>%
+  mutate(SA_PUB2022 = as.character(id)) %>%
+  filter(SA_PUB2022 %in% urban_csas)
+
+access_cycle_urban <- access_cycle %>%
+  mutate(SA_PUB2022 = as.character(id)) %>%
+  filter(SA_PUB2022 %in% urban_csas)
+
+cat("Urban walk rows:", nrow(access_walk_urban), "\n")
+cat("Urban cycle rows:", nrow(access_cycle_urban), "\n")
+```
+
+```{r boxplots-raw, fig.width=10, fig.height=5}
+# Raw scale
+p_walk_raw <- access_walk_urban %>%
+  filter(accessibility > 0) %>%
+  ggplot(aes(x = factor(cutoff), y = accessibility)) +
+  geom_boxplot(fill = "steelblue") +
+  labs(
+    title = "Walking accessibility - Raw",
+    x = "Cutoff (minutes)",
+    y = "School places reachable"
+  ) +
+  theme_minimal()
+
+p_cycle_raw <- access_cycle_urban %>%
+  filter(accessibility > 0) %>%
+  ggplot(aes(x = factor(cutoff), y = accessibility)) +
+  geom_boxplot(fill = "darkorange") +
+  labs(
+    title = "Cycling accessibility - Raw",
+    x = "Cutoff (minutes)",
+    y = "School places reachable"
+  ) +
+  theme_minimal()
+
+p_walk_raw + p_cycle_raw
+```
+
+```{r boxplots-normalised, fig.width=10, fig.height=5}
+# Log normalised
+p_walk_norm <- access_walk_urban %>%
+  filter(accessibility > 0) %>%
+  mutate(accessibility_log = log1p(accessibility)) %>%
+  ggplot(aes(x = factor(cutoff), y = accessibility_log)) +
+  geom_boxplot(fill = "steelblue") +
+  labs(
+    title = "Walking accessibility - Log normalised",
+    x = "Cutoff (minutes)",
+    y = "School places reachable (log1p)"
+  ) +
+  theme_minimal()
+
+p_cycle_norm <- access_cycle_urban %>%
+  filter(accessibility > 0) %>%
+  mutate(accessibility_log = log1p(accessibility)) %>%
+  ggplot(aes(x = factor(cutoff), y = accessibility_log)) +
+  geom_boxplot(fill = "darkorange") +
+  labs(
+    title = "Cycling accessibility - Log normalised",
+    x = "Cutoff (minutes)",
+    y = "School places reachable (log1p)"
+  ) +
+  theme_minimal()
+
+p_walk_norm + p_cycle_norm
+```
+
+```{r scatter-walk-raw}
+scatter_walk_raw <- access_walk_urban %>%
+  filter(cutoff == 30) %>%
+  left_join(saps_active, by = "SA_PUB2022") %>%
+  filter(!is.na(perc_active), accessibility > 0)
+
+plot_ly(scatter_walk_raw,
+        x = ~accessibility,
+        y = ~perc_active,
+        type = "scatter",
+        mode = "markers",
+        marker = list(opacity = 0.5, size = 5, color = "#a80050"),
+        text = ~paste("CSA:", SA_PUB2022,
+                      "<br>Accessibility:", round(accessibility),
+                      "<br>Active travel:", round(perc_active, 1), "%"),
+        hoverinfo = "text") %>%
+  layout(
+    title = "Walking vs Active travel - Raw (30 min)",
+    xaxis = list(title = "School places reachable"),
+    yaxis = list(title = "% walking or cycling to school")
+  )
+```
+
+```{r scatter-walk-normalised}
+scatter_walk_norm <- access_walk_urban %>%
+  filter(cutoff == 30) %>%
+  mutate(accessibility_log = log1p(accessibility)) %>%
+  left_join(saps_active, by = "SA_PUB2022") %>%
+  filter(!is.na(perc_active), accessibility > 0)
+
+plot_ly(scatter_walk_norm,
+        x = ~accessibility_log,
+        y = ~perc_active,
+        type = "scatter",
+        mode = "markers",
+        marker = list(opacity = 0.5, size = 5, color = "#a80050"),
+        text = ~paste("CSA:", SA_PUB2022,
+                      "<br>Accessibility (log):", round(accessibility_log, 2),
+                      "<br>Active travel:", round(perc_active, 1), "%"),
+        hoverinfo = "text") %>%
+  layout(
+    title = "Walking vs Active travel - Log normalised (30 min)",
+    xaxis = list(title = "School places reachable (log1p)"),
+    yaxis = list(title = "% walking or cycling to school")
+  )
+```
+
+```{r scatter-cycle-raw}
+scatter_cycle_raw <- access_cycle_urban %>%
+  filter(cutoff == 20) %>%
+  left_join(saps_active, by = "SA_PUB2022") %>%
+  filter(!is.na(perc_active), accessibility > 0)
+
+plot_ly(scatter_cycle_raw,
+        x = ~accessibility,
+        y = ~perc_active,
+        type = "scatter",
+        mode = "markers",
+        marker = list(opacity = 0.5, size = 5, color = "#4a90d9"),
+        text = ~paste("CSA:", SA_PUB2022,
+                      "<br>Accessibility:", round(accessibility),
+                      "<br>Active travel:", round(perc_active, 1), "%"),
+        hoverinfo = "text") %>%
+  layout(
+    title = "Cycling vs Active travel - Raw (20 min)",
+    xaxis = list(title = "School places reachable"),
+    yaxis = list(title = "% walking or cycling to school")
+  )
+```
+
+```{r scatter-cycle-normalised}
+scatter_cycle_norm <- access_cycle_urban %>%
+  filter(cutoff == 20) %>%
+  mutate(accessibility_log = log1p(accessibility)) %>%
+  left_join(saps_active, by = "SA_PUB2022") %>%
+  filter(!is.na(perc_active), accessibility > 0)
+
+plot_ly(scatter_cycle_norm,
+        x = ~accessibility_log,
+        y = ~perc_active,
+        type = "scatter",
+        mode = "markers",
+        marker = list(opacity = 0.5, size = 5, color = "#4a90d9"),
+        text = ~paste("CSA:", SA_PUB2022,
+                      "<br>Accessibility (log):", round(accessibility_log, 2),
+                      "<br>Active travel:", round(perc_active, 1), "%"),
+        hoverinfo = "text") %>%
+  layout(
+    title = "Cycling vs Active travel - Log normalised (20 min)",
+    xaxis = list(title = "School places reachable (log1p)"),
+    yaxis = list(title = "% walking or cycling to school")
+  )
+```

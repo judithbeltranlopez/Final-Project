@@ -1,0 +1,166 @@
+---
+title: "Travel Time Routes"
+author: "Sananthaa J S"
+date: "2026-05-26"
+output: html_document
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+options(java.parameters = "-Xmx8G")
+library(r5r)
+library(sf)
+library(leaflet)
+library(dplyr)
+```
+
+```{r build-network}
+r5r_core <- r5r::build_network(data_path = "D:/Final-Project/DATA")
+```
+
+```{r load-data}
+schools_sf <- readRDS("D:/Final-Project/DATA/schools_sf.rds") %>%
+  st_transform(4326)
+
+destinations <- schools_sf %>%
+  mutate(
+    id  = as.character(roll_number),
+    lon = st_coordinates(.)[,1],
+    lat = st_coordinates(.)[,2]
+  ) %>%
+  st_drop_geometry() %>%
+  select(id, lon, lat, places) %>%
+  filter(
+    lon > -9.15, lon < -8.90,
+    lat > 53.20, lat < 53.35
+  )
+
+cat("Galway schools:", nrow(destinations), "\n")
+```
+
+```{r origin}
+origin <- data.frame(
+  id  = "origin",
+  lon = -9.0489,
+  lat = 53.2743
+)
+```
+
+```{r routes}
+routes <- r5r::detailed_itineraries(
+  r5r_network   = r5r_core,
+  origins       = origin,
+  destinations  = destinations,
+  mode          = "WALK",
+  max_walk_time = 30,
+  verbose       = FALSE
+)
+cat("Routes returned:", nrow(routes), "\n")
+```
+
+```{r map}
+routes_sf <- routes %>%
+  st_as_sf() %>%
+  filter(mode == "WALK")
+
+leaflet() %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+
+  addPolylines(
+    data    = routes_sf,
+    color   = "#2980b9",
+    weight  = 2,
+    opacity = 0.6,
+    label   = ~paste0(round(total_duration, 1), " min walk")
+  ) %>%
+
+  addCircleMarkers(
+    data        = schools_sf %>%
+                  filter(as.character(roll_number) %in% destinations$id),
+    radius      = 6,
+    color       = "#9f1f55",
+    fillColor   = "#9f1f55",
+    fillOpacity = 0.9,
+    stroke      = FALSE,
+    popup       = ~paste0("<b>", name, "</b><br>Places: ", places)
+  ) %>%
+
+  addCircleMarkers(
+    lng         = -9.0489,
+    lat         = 53.2743,
+    radius      = 10,
+    color       = "black",
+    fillColor   = "yellow",
+    fillOpacity = 1,
+    popup       = "Origin — CSA centroid"
+  ) %>%
+
+  addLegend(
+    colors   = c("yellow", "#9f1f55", "#2980b9"),
+    labels   = c("Origin (CSA centroid)", "Schools", "Walking route"),
+    title    = "Walking accessibility",
+    position = "bottomright"
+  ) %>%
+
+  setView(lng = -9.0489, lat = 53.2743, zoom = 14)
+```
+
+```{r map}
+routes_sf <- routes %>%
+  st_as_sf() %>%
+  filter(mode == "WALK")
+
+pal <- colorNumeric(
+  palette = c("#2ca25f", "#fed976", "#fd8d3c"),
+  domain  = routes_sf$total_duration
+)
+
+leaflet() %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+
+  addPolylines(
+    data    = routes_sf,
+    color   = ~pal(total_duration),
+    weight  = 3,
+    opacity = 0.9,
+    label   = ~paste0(round(total_duration, 1), " min walk"),
+    highlightOptions = highlightOptions(
+      weight  = 5,
+      opacity = 1,
+      bringToFront = TRUE
+    )
+  ) %>%
+
+  addCircleMarkers(
+    data        = schools_sf %>%
+                  filter(as.character(roll_number) %in% destinations$id),
+    radius      = 6,
+    color       = "#9f1f55",
+    fillColor   = "#9f1f55",
+    fillOpacity = 0.9,
+    stroke      = FALSE,
+    popup       = ~paste0("<b>", name, "</b><br>Places: ", places)
+  ) %>%
+
+  addCircleMarkers(
+    lng         = -9.0489,
+    lat         = 53.2743,
+    radius      = 10,
+    color       = "black",
+    fillColor   = "yellow",
+    fillOpacity = 1,
+    popup       = "Origin — CSA centroid"
+  ) %>%
+
+  addLegend(
+    pal      = pal,
+    values   = routes_sf$total_duration,
+    title    = "Walking time (min)",
+    position = "bottomright"
+  ) %>%
+
+  setView(lng = -9.0489, lat = 53.2743, zoom = 14)
+```
+
+```{r stop-r5r}
+r5r::stop_r5(r5r_core)
+```

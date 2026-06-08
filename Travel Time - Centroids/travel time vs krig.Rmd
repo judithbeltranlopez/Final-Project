@@ -1,0 +1,102 @@
+---
+title: "Krig Vs r5r"
+author: "Sananthaa J S"
+date: "2026-05-19"
+output: html_document
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+library(plotly)
+
+```
+
+```{r load-data}
+final_df_complete <- readRDS("D:/Final-Project/DATA/final_df_complete.rds") %>%
+  sf::st_drop_geometry()
+
+compare_df <- final_df_complete %>%
+  filter(
+    urban_rural == "Urban",
+    !is.na(perc_active),
+    !is.na(krig_value),
+    !is.na(access_walk_30),
+    !is.na(target_pop_norm),
+    !is.na(pct_0_12),
+    !is.na(pct_13_21),
+    krig_value > 0,
+    access_walk_30 > 0
+  ) %>%
+  mutate(
+    pop_3_18       = target_pop_norm * (pct_0_12 * 0.75 / 100) +
+                     target_pop_norm * (pct_13_21 * 0.67 / 100),
+    log10_krig     = log10(krig_value     + 1),
+    log10_walk_30  = log10(access_walk_30 + 1)
+  ) %>%
+  filter(pop_3_18 > 0)
+
+cat("Urban CSAs for comparison:", nrow(compare_df), "\n")
+```
+
+```{r scatter-plots}
+p_krig <- plot_ly(compare_df,
+        x = ~log10_krig, y = ~perc_active,
+        type = "scatter", mode = "markers",
+        marker = list(opacity = 0.3, color = "#e74c3c", size = 4),
+        text = ~paste("Kriging (log10):", round(log10_krig, 2),
+                      "<br>Active travel:", round(perc_active, 1), "%"),
+        hoverinfo = "text") %>%
+  layout(
+    xaxis = list(title = "Kriging school place density (log10 scale)"),
+    yaxis = list(title = "% active travel"),
+    title = "Kriging"
+  )
+
+p_walk <- plot_ly(compare_df,
+        x = ~log10_walk_30, y = ~perc_active,
+        type = "scatter", mode = "markers",
+        marker = list(opacity = 0.3, color = "#2980b9", size = 4),
+        text = ~paste("Walk (log10):", round(log10_walk_30, 2),
+                      "<br>Active travel:", round(perc_active, 1), "%"),
+        hoverinfo = "text") %>%
+  layout(
+    xaxis = list(title = "School places reachable by walking"),
+    yaxis = list(title = "% active travel"),
+    title = "r5r Walking"
+  )
+
+subplot(p_krig, p_walk,
+        nrows = 1,
+        shareY = TRUE,
+        titleX = TRUE) %>%
+  layout(
+    title      = "Kriging vs Walking accessibility - Urban CSAs",
+    showlegend = FALSE
+  )
+```
+
+```{r correlation-bar}
+cor_df <- data.frame(
+  method = c("Kriging", "r5r Walking"),
+  correlation = c(
+    cor(compare_df$log10_krig,    compare_df$perc_active, use = "complete.obs"),
+    cor(compare_df$log10_walk_30, compare_df$perc_active, use = "complete.obs")
+  )
+)
+
+ggplot(cor_df, aes(x = method, y = correlation, fill = method)) +
+  geom_col(width = 0.5) +
+  geom_text(aes(label = round(correlation, 3)), vjust = -0.5, size = 4) +
+  scale_fill_manual(values = c(
+    "Kriging"     = "#e74c3c",
+    "r5r Walking" = "#2980b9"
+  )) +
+  labs(
+    title = "Correlation with active travel - Urban CSAs",
+    x     = "",
+    y     = "Pearson correlation"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
