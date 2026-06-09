@@ -1,13 +1,3 @@
-# =========================================================
-# Combined script:
-# 1) Prepare schools data
-# 2) Krige directly inside each Small Area using a 3 x 3 grid
-# 3) Build the final modelling dataset with kriging + SAPS variables
-# =========================================================
-
-# -----------------------------
-# 0) Libraries
-# -----------------------------
 library(tidyverse)
 library(sf)
 library(sp)
@@ -265,8 +255,8 @@ run_sa_3x3_kriging <- function(
     st_drop_geometry() %>%
     group_by(across(all_of(join_cols))) %>%
     summarise(
-      krig_value = weighted.mean(enrol_pred, area_w, na.rm = TRUE),
-      krig_var   = weighted.mean(var1.var, area_w, na.rm = TRUE),
+      krig_value = mean(enrol_pred,na.rm = TRUE),
+      krig_var   = mean(var1.var,na.rm = TRUE),
       n_samples  = n(),
       .groups = "drop"
     )
@@ -490,11 +480,23 @@ final_sf <- res_sa$sa_with_krig %>%
   st_transform(target_epsg) %>%
   mutate(
     area_km2 = as.numeric(st_area(geometry)) / 1e6,
-    places_density_km2 = safe_divide(krig_value, area_km2),
-    krig_density_per_child_3_18 = safe_divide(places_density_km2, pop_3_18),
-    krig_density_per_1000_3_18 = 1000 * krig_density_per_child_3_18,
+    
+    # Raw kriging value kept for reference
+    krig_value_raw = krig_value,
+    
+    # Normalised kriging value by population aged 3 to 18
+    krig_value_per_child_3_18 = safe_divide(krig_value_raw, pop_3_18),
+    krig_value_per_1000_3_18 = 1000 * krig_value_per_child_3_18,
+    
+    # If you want krig_value itself to be the normalised variable:
+    krig_value = krig_value_per_1000_3_18,
+    
+    # Optional density variables
+    places_density_km2 = safe_divide(krig_value_raw, area_km2),
+    
+    # Standardised versions
     krig_value_z = as.numeric(scale(krig_value)),
-    krig_density_per_1000_3_18_z = as.numeric(scale(krig_density_per_1000_3_18))
+    krig_value_raw_z = as.numeric(scale(krig_value_raw))
   )
 
 final_df <- final_sf %>%
@@ -505,25 +507,29 @@ final_df <- final_sf %>%
     is.finite(krig_value),
     krig_value > 0,
     is.finite(pop_3_18),
-    pop_3_18 > 0,
-    is.finite(krig_density_per_1000_3_18),
-    krig_density_per_1000_3_18 > 0
+    pop_3_18 > 0
   ) %>%
   select(
     SA_PUB2022,
     category,
     urban_rural,
     perc_active,
+    
+    # Normalised kriging value: predicted value per 1000 children aged 3-18
     krig_value,
+    
+    # Raw kriging value before normalisation
+    krig_value_raw,
+    
     krig_var,
     n_samples,
     area_km2,
     pop_3_18,
     places_density_km2,
-    krig_density_per_child_3_18,
-    krig_density_per_1000_3_18,
+    krig_value_per_child_3_18,
+    krig_value_per_1000_3_18,
     krig_value_z,
-    krig_density_per_1000_3_18_z,
+    krig_value_raw_z,
     total_pop,
     pct_0_12,
     pct_13_21,

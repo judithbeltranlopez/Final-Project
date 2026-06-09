@@ -122,7 +122,7 @@ linear_predictors <- z_ilr_vars
 
 # Spline terms for kriging and density
 spline_terms <- c(
-  "s(krig_value, k = 5)",
+  "s(krig_value_per_1000_3_18, k = 5)",
   "s(places_density_km2, k = 5)"
 )
 
