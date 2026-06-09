@@ -248,12 +248,12 @@ mcmc_plot(model_urban_krig, type = "neff")
 
 model_predictors <- all.vars(formula_beta)[-1]
 
-krig_mean <- mean(df_urban_model$krig_value, na.rm = TRUE)
-krig_sd <- sd(df_urban_model$krig_value, na.rm = TRUE)
+krig_mean <- mean(df_urban_model$krig_value_per_1000_3_18, na.rm = TRUE)
+krig_sd <- sd(df_urban_model$krig_value_per_1000_3_18, na.rm = TRUE)
 
 krig_grid <- seq(
-  quantile(df_urban_model$krig_value_z, 0.01, na.rm = TRUE),
-  quantile(df_urban_model$krig_value_z, 0.99, na.rm = TRUE),
+  quantile(df_urban_model$krig_value_per_1000_3_18, 0.01, na.rm = TRUE),
+  quantile(df_urban_model$krig_value_per_1000_3_18, 0.99, na.rm = TRUE),
   length.out = 100
 )
 
@@ -265,8 +265,8 @@ names(newdata_krig) <- model_predictors
 
 newdata_krig <- newdata_krig %>%
   mutate(
-    krig_value_z = krig_grid,
-    krig_value_original = krig_value_z * krig_sd + krig_mean
+    krig_value_per_1000_3_18 = krig_grid,
+    krig_value_original = krig_value_per_1000_3_18 * krig_sd + krig_mean
   )
 
 pred_krig <- fitted(
