@@ -14,6 +14,7 @@ library(brms)
 library(marginaleffects)
 library(collapse)
 library(compositions)
+library(posterior)
 ```
 
 ```{r}
@@ -24,12 +25,25 @@ model_df <- final_df %>%
 
 df_urban <- model_df %>% filter(urban_rural %in% "Urban")
 
+# pop_3_18 by summing actual census age counts for 3-18
+
+norm_pop <- readRDS("D:/Final-Project/outputs/final_df.rds") %>%
+  select(SA_PUB2022, pop_3_18) %>%
+  mutate(SA_PUB2022 = as.character(SA_PUB2022))
+
+# Join correct pop_3_18 onto urban data before ILR transformation
+df_urban <- df_urban %>%
+  mutate(SA_PUB2022 = as.character(SA_PUB2022)) %>%
+  select(-any_of("pop_3_18")) %>%
+  left_join(norm_pop, by = "SA_PUB2022")
+
+cat("pop_3_18 summary:\n")
+print(summary(df_urban$pop_3_18))
+cat("Missing pop_3_18:", sum(is.na(df_urban$pop_3_18)), "\n")
+
 cols <- c("pct_0_12","pct_13_21","pct_22_40","pct_41_70","pct_71plus",
           "pct_0car","pct_1car","pct_2plus","pct_none_primary",
           "pct_secondary","pct_tertiary","pct_still_in_edu")
-
-age_cols <- df_urban %>%
-  select(SA_PUB2022, pct_0_12, pct_13_21)
 
 matrix_urban     <- df_urban %>% select(all_of(cols)) %>% as.matrix()
 variables_ilr    <- ilr(acomp(matrix_urban))
@@ -38,8 +52,7 @@ names(variables_ilr_df) <- paste0("ilr_", cols[-length(cols)])
 
 df_urban_model <- df_urban %>%
   select(-all_of(cols)) %>%
-  bind_cols(variables_ilr_df) %>%
-  left_join(age_cols, by = "SA_PUB2022")
+  bind_cols(variables_ilr_df)
 ```
 
 ```{r}
@@ -50,11 +63,10 @@ df_urban_model <- df_urban_model %>%
     urban_area        = factor(SA_URBAN_AREA_NAME),
     z_target_pop_norm = as.numeric(scale(target_pop_norm)),
 
-    pop_3_18 = target_pop_norm * (pct_0_12 * 0.75 / 100) +
-               target_pop_norm * (pct_13_21 * 0.67 / 100),
-
-    # Log base 10 normalise walking accessibility
-    log10_walk_30 = log10(access_walk_30 + 1),
+    # Normalise walking accessibility per 1,000 children aged 3-18
+    # access_walk_per_1000 = school places per 1,000 children in the area
+    access_walk_per_1000 = 1000 * (access_walk_30 / pop_3_18),
+    log10_walk_30        = log10(access_walk_per_1000 + 1),
 
     perc_active_prop = perc_active / 100,
     perc_active_beta = (perc_active_prop * (nrow(.) - 1) + 0.5) / nrow(.)
@@ -65,12 +77,14 @@ df_urban_model <- df_urban_model %>%
     !is.na(county),
     !is.na(urban_area),
     !is.na(log10_walk_30),
-    pop_3_18 > 0
+    pop_3_18 > 0,
+    access_walk_per_1000 < 100000
   ) %>%
   droplevels()
 
 cat("Rows for modelling:", nrow(df_urban_model), "\n")
-cat("Walk range (log10):", range(df_urban_model$log10_walk_30), "\n")
+cat("access_walk_per_1000 range:", range(df_urban_model$access_walk_per_1000, na.rm = TRUE), "\n")
+cat("log10_walk_30 range:", range(df_urban_model$log10_walk_30, na.rm = TRUE), "\n")
 ```
 
 ```{r}
@@ -86,38 +100,48 @@ df_urban_model <- df_urban_model %>%
     )
   )
 
+# Add spline for log10_walk_30 instead of a linear term
+# A spline allows the relationship to be curved rather than a straight line
+# k = 5 means 5 basis functions - flexible but not overfitted
+spline_terms <- c("s(log10_walk_30, k = 5)")
+
 predictors <- c(
   paste0("z_", ilr_vars),
-  "log10_walk_30"
+  spline_terms
 )
 
 formula_beta <- as.formula(
   paste("perc_active_beta ~", paste(predictors, collapse = " + "))
 )
-
-cat("Formula built successfully\n")
-cat("log10_walk_30 in data:", "log10_walk_30" %in% names(df_urban_model), "\n")
+print(formula_beta)
 ```
 
 ```{r}
+# Added prior for spline smoothness sds controls how wiggly the spline can be
 priors <- c(
   prior(normal(0, 1),   class = "b"),
   prior(normal(0, 2.5), class = "Intercept"),
-  prior(exponential(1), class = "phi")
+  prior(exponential(1), class = "phi"),
+  prior(exponential(1), class = "sds")
 )
 ```
 
 ```{r model}
+# cores = 4 runs chains, paralell
 model_urban_walk <- brm(
-  formula = formula_beta,
-  data    = df_urban_model,
-  family  = Beta(link = "logit"),
-  prior   = priors,
-  chains  = 4,
-  iter    = 4000,
-  warmup  = 1000,
-  seed    = 123,
-  control = list(adapt_delta = 0.95)
+  formula       = formula_beta,
+  data          = df_urban_model,
+  family        = Beta(link = "logit"),
+  prior         = priors,
+  chains        = 4,
+  iter          = 4000,
+  warmup        = 1000,
+  seed          = 123,
+  cores         = 4,
+  control       = list(
+    adapt_delta   = 0.97,
+    max_treedepth = 12
+  )
 )
 
 saveRDS(model_urban_walk, "D:/Final-Project/DATA/model_urban_walk.rds")
@@ -129,48 +153,74 @@ plot(model_urban_walk)
 ```
 
 ```{r}
-model_predictors <- all.vars(formula_beta)[-1]
+# Convergence checks
 
-walk_grid <- seq(
-  min(df_urban_model$log10_walk_30, na.rm = TRUE),
-  max(df_urban_model$log10_walk_30, na.rm = TRUE),
-  length.out = 100
-)
+draws_summary <- posterior::summarise_draws(model_urban_walk)
 
-newdata_walk <- as_tibble(
-  matrix(0, nrow = length(walk_grid), ncol = length(model_predictors))
-)
-names(newdata_walk) <- model_predictors
+rhat_bad <- draws_summary %>%
+  filter(!is.na(rhat), rhat > 1.01)
 
-newdata_walk <- newdata_walk %>%
-  mutate(log10_walk_30 = walk_grid)
-
-pred_walk <- fitted(
-  model_urban_walk,
-  newdata = newdata_walk,
-  scale   = "response",
-  probs   = c(0.125, 0.875)
-)
-
-plot_walk <- bind_cols(newdata_walk, as_tibble(pred_walk)) %>%
-  mutate(
-    Estimate_pct = Estimate * 100,
-    Q2.5_pct     = Q12.5 * 100,
-    Q97.5_pct    = Q87.5 * 100
+ess_bad <- draws_summary %>%
+  filter(
+    !is.na(ess_bulk),
+    !is.na(ess_tail),
+    ess_bulk < 400 | ess_tail < 400
   )
 
-ggplot(plot_walk, aes(x = log10_walk_30, y = Estimate_pct)) +
-  geom_ribbon(aes(ymin = Q2.5_pct, ymax = Q97.5_pct), alpha = 0.2) +
-  geom_line(linewidth = 1) +
+nuts <- nuts_params(model_urban_walk)
+
+n_divergent <- nuts %>%
+  filter(Parameter == "divergent__") %>%
+  summarise(n = sum(Value)) %>%
+  pull(n)
+
+n_treedepth <- nuts %>%
+  filter(Parameter == "treedepth__") %>%
+  summarise(n = sum(Value >= 12)) %>%
+  pull(n)
+
+convergence_report <- tibble(
+  check = c(
+    "Rhat <= 1.01",
+    "Bulk and Tail ESS >= 400",
+    "No divergent transitions",
+    "No max treedepth hits"
+  ),
+  passed = c(
+    nrow(rhat_bad) == 0,
+    nrow(ess_bad) == 0,
+    n_divergent == 0,
+    n_treedepth == 0
+  ),
+  problem = c(
+    paste(rhat_bad$variable, collapse = ", "),
+    paste(ess_bad$variable, collapse = ", "),
+    as.character(n_divergent),
+    as.character(n_treedepth)
+  )
+)
+
+print(convergence_report)
+```
+
+```{r}
+# Marginal plot using plot_predictions from marginaleffects
+# This is better for splines because it handles the curve correctly
+# The x axis is back-transformed to show real school places per 1,000 children
+
+plot_predictions(
+  model_urban_walk,
+  condition = "log10_walk_30"
+) +
   scale_x_continuous(
-    breaks = c(0, 1, 2, 3, 4),
-    labels = c("0", "10", "100", "1,000", "10,000")
+    breaks = c(0, 1, 2, 3),
+    labels = c("0", "10", "100", "1,000")
   ) +
   labs(
-    title    = "Effect of walking accessibility on active travel",
+    title = "Effect of walking accessibility on active travel",
     subtitle = "Other predictors fixed at their average standardised value",
-    x        = "School places reachable by walking (30 min)",
-    y        = "Active travel (%)"
+    x = "School places reachable per 1,000 children (30 min walk)",
+    y = "Predicted active travel (%)"
   ) +
   theme_minimal(base_size = 13)
 ```
@@ -178,4 +228,11 @@ ggplot(plot_walk, aes(x = log10_walk_30, y = Estimate_pct)) +
 ```{r}
 saveRDS(df_urban_model,   "D:/Final-Project/DATA/df_urban_model_walk.rds")
 saveRDS(formula_beta,     "D:/Final-Project/DATA/formula_beta_walk.rds")
+
+summary(df_urban_model$access_walk_per_1000)
+quantile(df_urban_model$access_walk_per_1000, probs = c(0.9, 0.95, 0.99, 1))
+
+# Check log10 variable directly
+summary(df_urban_model$log10_walk_30)
+quantile(df_urban_model$log10_walk_30, probs = c(0.9, 0.95, 0.99))
 ```
