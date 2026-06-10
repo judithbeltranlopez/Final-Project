@@ -288,6 +288,58 @@ ggplot(plot_krig, aes(x = krig_value_original, y = Estimate_pct)) +
   ) +
   theme_minimal(base_size = 13)
 ```
+```{r}
+# ============================================================
+# Fitted vs observed values
+# ============================================================
+
+# Keep only rows used for prediction
+model_vars <- all.vars(formula_beta)
+
+df_fit_plot <- df_urban_model %>%
+  filter(if_all(all_of(model_vars), ~ !is.na(.x)))
+
+# Posterior fitted mean for each observation
+fitted_values <- fitted(
+  model_urban_krig,
+  newdata = df_fit_plot,
+  scale = "response",
+  probs = c(0.025, 0.975)
+)
+
+df_fit_plot <- df_fit_plot %>%
+  bind_cols(as_tibble(fitted_values)) %>%
+  mutate(
+    observed_pct = perc_active,
+    fitted_pct = Estimate * 100,
+    fitted_lower_pct = Q2.5 * 100,
+    fitted_upper_pct = Q97.5 * 100,
+    residual_pct = observed_pct - fitted_pct
+  )
+
+# Goodness-of-fit summaries
+fit_stats <- df_fit_plot %>%
+  summarise(
+    RMSE = sqrt(mean((observed_pct - fitted_pct)^2, na.rm = TRUE)),
+    MAE = mean(abs(observed_pct - fitted_pct), na.rm = TRUE),
+    correlation = cor(observed_pct, fitted_pct, use = "complete.obs")
+  )
+
+fit_stats
+
+# Scatter plot: fitted vs observed
+ggplot(df_fit_plot, aes(x = observed_pct, y = fitted_pct)) +
+  geom_point(alpha = 0.35) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", linewidth = 1) +
+  coord_equal(xlim = c(0, 100), ylim = c(0, 100)) +
+  labs(
+    title = "Observed vs fitted active travel percentage",
+    subtitle = "Dashed line represents perfect prediction",
+    x = "Observed active percentage",
+    y = "Fitted active percentage"
+  ) +
+  theme_minimal(base_size = 13)
+```
 
 ```{r}
 dir.create("data2", showWarnings = FALSE)
