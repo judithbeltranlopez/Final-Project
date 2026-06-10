@@ -11,6 +11,7 @@ library(brms)
 library(marginaleffects)
 library(collapse)
 library(compositions)
+library(splines)
 ```
 
 ```{r}
@@ -122,8 +123,8 @@ linear_predictors <- z_ilr_vars
 
 # Spline terms for kriging and density
 spline_terms <- c(
-  "s(krig_value_per_1000_3_18, k = 5)",
-  "s(places_density_km2, k = 5)"
+  "ns(krig_value_per_1000_3_18, df = 3)",
+  "ns(places_density_km2, df = 3)"
 )
 
 formula_beta <- as.formula(
@@ -142,17 +143,7 @@ formula_beta
 priors <- c(
   prior(normal(0, 1), class = "b"),
   prior(normal(0, 2.5), class = "Intercept"),
-  prior(exponential(1), class = "phi"),
-
-  # Prior for spline smoothness
-  prior(exponential(1), class = "sds")
-)
-
-get_prior(
-  formula = formula_beta,
-  data = df_urban_model,
-  family = Beta(link = "logit")
-)
+  prior(exponential(1), class = "phi"))
 
 # ============================================================
 # 6. Fit Bayesian beta regression model with splines
