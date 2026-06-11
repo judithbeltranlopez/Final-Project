@@ -10,7 +10,7 @@ authors:
     department: Department of Mathematics & Statistics
     affiliation: University of Galway
     location: Galway,Ireland
-    email:
+    email: j.beltranlopez1@universityofgalway.ie
 abstract: |
   In Ireland, whether a child can walk or cycle to school depends heavily on where they live, something that has been described as a postcode lottery. This study investigates whether the location of schools and how easily they can be reached explains differences in active travel rates across Ireland. We used data from the 2022 Census, the Department of Education, and OpenStreetMap to measure school accessibility for over 16,000 small areas across Ireland. Two methods were used to measure accessibility-kriging, which estimates the density of school places across space, and r5r, which calculates how many school places can be reached within a given walking or cycling time using the real road network. We then used Bayesian Beta regression to model the relationship between accessibility and the proportion of children walking or cycling to school.
 keywords:
@@ -51,13 +51,490 @@ However, you can also use **bookdown** extensions mechanism for this.
 
 # 3 Methods
 
-## 3.1 School Place Density:Kriging
+## 3.1 School Place Density: Kriging
+
+This section describes the construction of the school place density variable used as the main spatial accessibility exposure in the analysis. The aim was to estimate how the availability of school places varies spatially across Ireland and to derive a Small Area-level measure that could be linked to Census 2022 demographic and travel behaviour data.
+
+The input school data consisted of individual mainstream schools for the 2024/25 academic year, including school coordinates and enrolment counts. Since school enrolment was used as a proxy for school place availability, schools with missing coordinates or invalid enrolment values were removed. Enrolment was log-transformed before interpolation because the original enrolment distribution was positively skewed.
+
+All spatial datasets were transformed to the Irish Transverse Mercator coordinate reference system, EPSG:2157, so that distances and areas were measured consistently in metres. Schools with identical coordinates were aggregated by taking the mean log-enrolment value, avoiding duplicated point locations in the geostatistical model.
+
+Ordinary kriging was used to predict school place availability at unsampled locations. Kriging is appropriate here because it uses the spatial autocorrelation structure of the observed school data to estimate values at locations where no school is directly observed. The spatial dependence in log-enrolment was first assessed using an empirical variogram. An exponential variogram model was then fitted and used to generate kriging predictions.
+
+Instead of predicting only at the centroid of each Census Small Area, each Small Area was divided into a 3 × 3 internal grid. Prediction points were created within the valid clipped grid cells using a point-on-surface approach. Kriging predictions were obtained at these internal points and then averaged to obtain a single predicted value for each Small Area. This approach was used to better represent irregularly shaped Small Areas and reduce dependence on a single centroid.
+
+The raw kriging output was back-transformed from the log scale using the exponential function. This produced a raw spatially interpolated estimate of school place intensity. However, because Small Areas differ in the number of children living in them, this raw value was normalised by the Census 2022 population aged 3–18 years. The final school place density variable was expressed as predicted school place intensity per 1,000 children aged 3–18:
+
+[
+\text{School place density}*{i} =
+1000 \times
+\frac{
+\text{Raw kriged school place value}*{i}
+}{
+\text{Population aged 3--18}_{i}
+}
+]
+
+Higher values indicate greater predicted school place availability relative to the local school-age population. Lower values indicate lower predicted availability relative to potential local demand. This normalised variable was used in the later statistical modelling as the main school place accessibility exposure.
+
+```{r setup-kriging-section, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(sf)
+library(gstat)
+library(knitr)
+
+# Load objects created by the kriging script
+obj <- readRDS("outputs/combined_kriging_objects.rds")
+
+dat_irl          <- obj$dat_irl
+variogram_emp    <- obj$variogram
+variogram_model  <- obj$variogram_model
+kriged_points_sf <- obj$kriged_points_sf
+final_sf         <- obj$final_sf
+final_df         <- obj$final_df
+final_df_urban   <- obj$final_df_urban
+
+schools_sf <- dat_irl$schools_agg_sf %>%
+  mutate(enrolment_est = exp(log_enrol))
+
+final_sf_plot <- final_sf %>%
+  filter(
+    !is.na(urban_rural),
+    is.finite(krig_value_raw),
+    is.finite(krig_value_per_1000_3_18),
+    is.finite(krig_var)
+  )
+```
+
+### Observed school locations
+
+```{r school-locations-map, fig.cap="Spatial distribution of mainstream schools used in the kriging analysis. Points represent school locations and are coloured by estimated enrolment. These observed locations form the input data for the interpolation.", message=FALSE, warning=FALSE}
+ggplot() +
+  geom_sf(data = final_sf_plot, fill = "grey95", colour = NA) +
+  geom_sf(
+    data = schools_sf,
+    aes(colour = enrolment_est),
+    size = 0.8,
+    alpha = 0.8
+  ) +
+  scale_colour_viridis_c(name = "Enrolment") +
+  labs(
+    title = "Observed school locations",
+    subtitle = "School points used as input for kriging"
+  ) +
+  theme_minimal()
+```
+
+### Distribution of enrolment before and after log transformation
+
+```{r enrolment-histogram, fig.cap="Distribution of school enrolment before log transformation. The raw enrolment variable is positively skewed, motivating the use of log-enrolment in the kriging model.", message=FALSE, warning=FALSE}
+schools_sf %>%
+  st_drop_geometry() %>%
+  ggplot(aes(x = enrolment_est)) +
+  geom_histogram(bins = 40) +
+  labs(
+    title = "Distribution of raw school enrolment",
+    x = "School enrolment",
+    y = "Number of schools"
+  ) +
+  theme_minimal()
+```
+
+```{r log-enrolment-histogram, fig.cap="Distribution of log-transformed school enrolment. The log transformation reduces skewness and limits the influence of very large schools in the spatial interpolation.", message=FALSE, warning=FALSE}
+schools_sf %>%
+  st_drop_geometry() %>%
+  ggplot(aes(x = log_enrol)) +
+  geom_histogram(bins = 40) +
+  labs(
+    title = "Distribution of log school enrolment",
+    x = "Log school enrolment",
+    y = "Number of schools"
+  ) +
+  theme_minimal()
+```
+
+### Empirical and fitted variogram
+
+The empirical variogram was used to assess whether school enrolment values were spatially autocorrelated. The fitted exponential variogram model was then used to derive the kriging weights.
+
+```{r variogram-plot, fig.cap="Empirical variogram and fitted exponential variogram model for log school enrolment. The fitted model describes the spatial dependence structure used by ordinary kriging.", message=FALSE, warning=FALSE}
+plot(
+  variogram_emp,
+  variogram_model,
+  main = "Empirical and fitted variogram for log school enrolment"
+)
+```
+
+### Small Area prediction points
+
+```{r prediction-points-example, fig.cap="Example of internal prediction points within one Census Small Area. Each Small Area was divided into a 3 × 3 grid, clipped to the boundary, and represented using internal point-on-surface prediction locations.", message=FALSE, warning=FALSE}
+example_sa_id <- kriged_points_sf %>%
+  st_drop_geometry() %>%
+  count(SA_PUB2022, name = "n_points") %>%
+  arrange(desc(n_points)) %>%
+  slice(1) %>%
+  pull(SA_PUB2022)
+
+example_sa <- final_sf %>%
+  filter(SA_PUB2022 == example_sa_id)
+
+example_pts <- kriged_points_sf %>%
+  filter(SA_PUB2022 == example_sa_id)
+
+ggplot() +
+  geom_sf(data = example_sa, fill = "grey95", colour = "black") +
+  geom_sf(data = example_pts, size = 2) +
+  labs(
+    title = "Example of 3 × 3 Small Area prediction points",
+    subtitle = paste("Small Area:", example_sa_id)
+  ) +
+  theme_minimal()
+```
+
+### Raw kriged school place intensity
+
+```{r raw-kriging-map, fig.cap="Raw kriged school place intensity by Small Area. Values represent the average back-transformed kriging prediction across the internal prediction points in each Small Area.", message=FALSE, warning=FALSE}
+ggplot(final_sf_plot) +
+  geom_sf(aes(fill = krig_value_raw), colour = NA) +
+  scale_fill_viridis_c(name = "Raw kriged\nvalue") +
+  labs(
+    title = "Raw kriged school place intensity",
+    subtitle = "Back-transformed prediction from the log-enrolment kriging model"
+  ) +
+  theme_minimal()
+```
+
+### Normalised school place density per 1,000 children aged 3–18
+
+```{r normalised-kriging-map, fig.cap="Normalised school place density per 1,000 children aged 3–18 by Small Area. This is the main school accessibility exposure used in the modelling stage.", message=FALSE, warning=FALSE}
+ggplot(final_sf_plot) +
+  geom_sf(aes(fill = krig_value_per_1000_3_18), colour = NA) +
+  scale_fill_viridis_c(name = "School place density\nper 1,000 children") +
+  labs(
+    title = "School place density per 1,000 children aged 3–18",
+    subtitle = "Raw kriged value normalised by local school-age population"
+  ) +
+  theme_minimal()
+```
+
+### Kriging prediction variance
+
+```{r kriging-variance-map, fig.cap="Kriging prediction variance by Small Area. Higher values indicate areas where the kriging prediction is more uncertain.", message=FALSE, warning=FALSE}
+ggplot(final_sf_plot) +
+  geom_sf(aes(fill = krig_var), colour = NA) +
+  scale_fill_viridis_c(name = "Prediction\nvariance") +
+  labs(
+    title = "Kriging prediction variance",
+    subtitle = "Uncertainty associated with the kriging predictions"
+  ) +
+  theme_minimal()
+```
+
+### Urban and rural comparison
+
+```{r urban-rural-density-boxplot, fig.cap="Distribution of normalised school place density by urban-rural classification. This plot compares the school accessibility exposure across urban and rural Small Areas.", message=FALSE, warning=FALSE}
+final_df %>%
+  filter(
+    !is.na(urban_rural),
+    is.finite(krig_value_per_1000_3_18)
+  ) %>%
+  ggplot(aes(x = urban_rural, y = krig_value_per_1000_3_18)) +
+  geom_boxplot(outlier.alpha = 0.3) +
+  labs(
+    title = "School place density by urban-rural classification",
+    x = "Urban-rural classification",
+    y = "School place density per 1,000 children aged 3–18"
+  ) +
+  theme_minimal()
+```
+
+### Relationship with active school travel in urban areas
+
+```{r active-travel-kriging-scatter, fig.cap="Relationship between active school travel and normalised school place density in urban Small Areas. Each point represents one urban Small Area.", message=FALSE, warning=FALSE}
+final_df_urban %>%
+  filter(
+    is.finite(perc_active),
+    is.finite(krig_value_per_1000_3_18)
+  ) %>%
+  ggplot(aes(x = krig_value_per_1000_3_18, y = perc_active)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "loess", se = TRUE) +
+  labs(
+    title = "Active school travel and school place density",
+    subtitle = "Urban Small Areas only",
+    x = "School place density per 1,000 children aged 3–18",
+    y = "Active school travel (%)"
+  ) +
+  theme_minimal()
+```
+
+### Final kriging dataset checks
+
+```{r kriging-summary-checks, message=FALSE, warning=FALSE}
+final_df %>%
+  summarise(
+    n = n(),
+    missing_krig = sum(is.na(krig_value)),
+    missing_perc_active = sum(is.na(perc_active)),
+    min_krig = min(krig_value, na.rm = TRUE),
+    max_krig = max(krig_value, na.rm = TRUE),
+    min_krig_norm = min(krig_value_per_1000_3_18, na.rm = TRUE),
+    max_krig_norm = max(krig_value_per_1000_3_18, na.rm = TRUE)
+  ) %>%
+  kable(
+    digits = 3,
+    caption = "Summary checks for the final kriging-derived dataset."
+  )
+```
+
+The resulting dataset contains the raw kriged school place estimate, the normalised school place density per 1,000 children aged 3–18, the kriging prediction variance, and the Census-derived variables used in the later modelling stage. For interpretation, the normalised variable is preferred because it accounts for differences in local school-age population size. The raw kriged value is retained only as a reference measure of interpolated school place intensity.
+
 
 ## 3.2 Travel Time Accessibility:r5r
 
-## 3.3 Demographic Variables:ILR Transformation
+## 3.3 Demographic Variables: ILR Transformation
 
-## 3.4 Statistical Model:Bayesian Beta Regression
+Several demographic covariates used in this study are expressed as percentages. These include age composition, household car availability, and educational attainment. Although percentages are easy to interpret descriptively, they require special treatment in regression modelling because they are compositional variables. A composition is a set of parts that together represent a whole. For example, the age-group percentages in a Small Area represent the distribution of the local population across age categories, while the car-ownership percentages represent the distribution of households according to the number of cars available.
+
+The main issue with compositional variables is that their components are not statistically independent. If one percentage increases, at least one other percentage must decrease because the parts are constrained by a fixed total. This means that raw percentages do not behave like ordinary unconstrained regression predictors. Including all components directly in a regression model can lead to perfect or near-perfect collinearity, unstable coefficients, and misleading interpretations.
+
+To address this issue, the demographic percentage variables were transformed using the isometric log-ratio transformation. The ILR transformation converts a composition with (D) parts into (D - 1) real-valued coordinates. These transformed coordinates can then be used in standard regression models because they are no longer constrained to sum to a fixed total. In this analysis, the ILR-transformed variables represent balances between groups of compositional parts rather than isolated changes in individual percentages.
+
+Exact zero values cannot be used directly in log-ratio transformations because the logarithm of zero is undefined. Therefore, before applying the ILR transformation, zero percentages were replaced with a very small positive value. This allowed the transformation to be computed while minimally altering the original data structure.
+
+In this study, the ILR transformation was applied to demographic variables describing the composition of urban Small Areas. The transformed ILR coordinates were then used as covariates in the statistical model instead of the original percentage variables. This approach reduces collinearity between demographic percentages and ensures that the regression model respects the relative nature of compositional data.
+
+```{r ilr-transformation, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(compositions)
+
+# Demographic compositional variables
+cols <- c(
+  "pct_0_12",
+  "pct_13_21",
+  "pct_22_40",
+  "pct_41_70",
+  "pct_71plus",
+  "pct_0car",
+  "pct_1car",
+  "pct_2plus",
+  "pct_none_primary",
+  "pct_secondary",
+  "pct_tertiary",
+  "pct_still_in_edu"
+)
+
+# Check that all required variables exist in the urban dataset
+missing_cols <- setdiff(cols, names(df_urban))
+
+if (length(missing_cols) > 0) {
+  stop(
+    "These ILR variables are missing from the new dataset:\n",
+    paste(missing_cols, collapse = ", ")
+  )
+}
+
+# Keep missing values as missing
+df_urban <- df_urban %>%
+  mutate(
+    across(
+      all_of(cols),
+      ~ ifelse(is.na(.x), NA_real_, .x)
+    )
+  )
+
+# Convert selected percentage variables into a matrix
+matrix_urban <- df_urban %>%
+  select(all_of(cols)) %>%
+  as.matrix()
+
+# Replace exact zeros with a very small positive value
+# This is necessary because log-ratio transformations cannot handle zeros
+matrix_urban[matrix_urban == 0] <- 0.001
+
+# Apply ILR transformation
+variables_ilr <- ilr(acomp(matrix_urban))
+
+# Convert ILR coordinates to a dataframe
+variables_ilr_df <- as.data.frame(variables_ilr)
+
+# Name ILR variables
+# A composition with D parts produces D - 1 ILR coordinates
+names(variables_ilr_df) <- paste0("ilr_", cols[-length(cols)])
+
+# Create the final urban modelling dataset
+# Original percentage variables are removed and replaced by ILR coordinates
+df_urban_model <- df_urban %>%
+  select(-all_of(cols)) %>%
+  bind_cols(variables_ilr_df)
+```
+
+The resulting dataset, `df_urban_model`, contains the original outcome and accessibility variables, but replaces the raw demographic percentage variables with ILR-transformed coordinates. These ILR variables are then used in the Bayesian regression model to adjust for differences in demographic structure across urban Small Areas.
+
+
+## 3.4 Statistical Model: Bayesian Beta Regression
+
+The main statistical model was used to estimate the association between school place accessibility and active school travel in urban Small Areas. The outcome variable was the percentage of pupils travelling to school by active modes, defined as walking or cycling. Since this outcome is a proportion bounded between 0 and 1 after rescaling, a beta regression model was used.
+
+Beta regression is appropriate for this analysis because the response variable represents a continuous proportion. Standard linear regression would not be ideal because it could generate predicted values below 0 or above 1 and assumes constant variance across the outcome range. In contrast, the beta distribution is naturally defined on the open interval ((0, 1)), making it suitable for modelling proportional outcomes.
+
+Before fitting the model, the active travel percentage was converted from a percentage to a proportion. Since the beta distribution cannot handle exact values of 0 or 1, the transformed response was adjusted slightly so that all observations lay strictly between 0 and 1.
+
+```{r beta-response-preparation, message=FALSE, warning=FALSE}
+df_urban_model <- df_urban_model %>%
+  mutate(
+    perc_active_prop = perc_active / 100,
+    perc_active_beta = (perc_active_prop * (nrow(.) - 1) + 0.5) / nrow(.)
+  )
+
+range(df_urban_model$perc_active_beta, na.rm = TRUE)
+```
+
+The model was fitted only to urban Small Areas, as these were the main population of interest for the analysis. The demographic covariates were included using standardised ILR-transformed variables. These ILR variables adjust for differences in age structure, car ownership, and educational composition while avoiding the collinearity problems associated with raw percentages.
+
+The school accessibility variables were included using natural cubic spline terms. This allowed the relationship between school accessibility and active travel to be non-linear. This is important because the effect of school place accessibility may not be constant across its full range. For example, increases in accessibility may be strongly associated with active travel at lower values, but the association may flatten at higher values. Natural cubic splines allow this type of flexible relationship while avoiding the assumption of a purely linear effect.
+
+Two spline terms were included:
+
+[
+ns(\text{school place density per 1,000 children aged 3--18}, df = 3)
+]
+
+and
+
+[
+ns(\text{school places per km}^2, df = 3)
+]
+
+The first term represents school place availability relative to the local school-age population. The second term represents spatial density of predicted school places per square kilometre. Including both terms allows the model to distinguish between accessibility relative to population demand and the spatial concentration of school places.
+
+The fitted model can be written as:
+
+[
+y_i \sim \text{Beta}(\mu_i, \phi)
+]
+
+[
+\text{logit}(\mu_i) =
+\alpha +
+\sum_{j=1}^{p} \beta_j Z_{ij}
++
+f_1(K_i)
++
+f_2(D_i)
+]
+
+where (y_i) is the active travel proportion in urban Small Area (i), (\mu_i) is the expected active travel proportion, and (\phi) is the beta precision parameter. The terms (Z_{ij}) represent the standardised ILR demographic covariates. The function (f_1(K_i)) represents the natural spline for school place density per 1,000 children aged 3–18, and (f_2(D_i)) represents the natural spline for school places per square kilometre.
+
+```{r beta-model-formula, message=FALSE, warning=FALSE}
+library(brms)
+library(splines)
+
+# Linear ILR terms
+linear_predictors <- z_ilr_vars
+
+# Natural cubic spline terms for kriging-derived accessibility variables
+spline_terms <- c(
+  "ns(krig_value_per_1000_3_18, df = 3)",
+  "ns(places_density_km2, df = 3)"
+)
+
+formula_beta <- as.formula(
+  paste(
+    "perc_active_beta ~",
+    paste(c(linear_predictors, spline_terms), collapse = " + ")
+  )
+)
+
+formula_beta
+```
+
+Weakly informative priors were used for the model parameters. A normal prior with mean 0 and standard deviation 1 was assigned to the regression coefficients. This prior regularises the model by discouraging unrealistically large effects while still allowing the data to influence the posterior estimates. The intercept was assigned a wider normal prior with mean 0 and standard deviation 2.5 on the logit scale. The beta precision parameter, (\phi), was assigned an exponential prior to ensure that it remains positive.
+
+```{r beta-model-priors, message=FALSE, warning=FALSE}
+priors <- c(
+  prior(normal(0, 1), class = "b"),
+  prior(normal(0, 2.5), class = "Intercept"),
+  prior(exponential(1), class = "phi")
+)
+
+priors
+```
+
+The Bayesian beta regression model was fitted using the `brms` package. The model was run with four Markov chains, 4,000 iterations per chain, and 1,000 warm-up iterations. The `adapt_delta` parameter was set to 0.97 and the maximum tree depth was set to 12 to improve Hamiltonian Monte Carlo sampling and reduce the risk of divergent transitions.
+
+```{r fit-beta-regression-model, message=FALSE, warning=FALSE}
+model_urban_krig <- brm(
+  formula = formula_beta,
+  data = df_urban_model,
+  family = Beta(link = "logit"),
+  prior = priors,
+  chains = 4,
+  iter = 4000,
+  warmup = 1000,
+  seed = 123,
+  cores = 4,
+  control = list(
+    adapt_delta = 0.97,
+    max_treedepth = 12
+  )
+)
+```
+
+The logit link was used so that the expected active travel proportion remains between 0 and 1. Coefficients from the model are therefore estimated on the log-odds scale. For this reason, the main interpretation of the model was based on predicted values and marginal effect plots on the response scale rather than on the raw coefficient values alone.
+
+Model convergence was assessed using standard Bayesian diagnostics. These included (\hat{R}), effective sample size, trace plots, divergent transitions, and posterior predictive checks. Values of (\hat{R}) close to 1 indicate that the chains mixed well. Large effective sample sizes indicate that the posterior summaries are reliable. Posterior predictive checks were used to assess whether the model could reproduce the observed distribution of active travel.
+
+```{r beta-model-summary, message=FALSE, warning=FALSE}
+summary(model_urban_krig)
+```
+
+```{r beta-model-traceplots, fig.cap="Trace plots for the Bayesian beta regression model. Good mixing across chains indicates that the posterior distribution was explored adequately.", message=FALSE, warning=FALSE}
+plot(model_urban_krig)
+```
+
+```{r beta-model-posterior-predictive-check, fig.cap="Posterior predictive check for the Bayesian beta regression model. The observed active travel distribution is compared with replicated datasets simulated from the fitted model.", message=FALSE, warning=FALSE}
+pp_check(model_urban_krig, ndraws = 100)
+```
+
+```{r beta-model-divergences, message=FALSE, warning=FALSE}
+nuts_params(model_urban_krig) %>%
+  filter(Parameter == "divergent__") %>%
+  summarise(n_divergences = sum(Value))
+```
+
+The estimated relationship between school place accessibility and active travel was visualised using conditional effect plots. These plots show the expected active travel percentage across the range of each accessibility variable while holding the other covariates constant. They are more interpretable than the raw spline coefficients because spline coefficients do not represent simple one-unit changes.
+
+```{r beta-conditional-effect-krig, fig.cap="Estimated relationship between school place density per 1,000 children aged 3–18 and active school travel in urban Small Areas. The relationship is modelled using a natural cubic spline.", message=FALSE, warning=FALSE}
+conditional_effects(
+  model_urban_krig,
+  effects = "krig_value_per_1000_3_18"
+) %>%
+  plot(points = TRUE)
+```
+
+```{r beta-conditional-effect-density, fig.cap="Estimated relationship between predicted school places per square kilometre and active school travel in urban Small Areas. The relationship is modelled using a natural cubic spline.", message=FALSE, warning=FALSE}
+conditional_effects(
+  model_urban_krig,
+  effects = "places_density_km2"
+) %>%
+  plot(points = TRUE)
+```
+
+Bayesian (R^2) was used as an additional summary of model fit. This gives an approximate measure of the proportion of variation in active travel explained by the model.
+
+```{r beta-model-bayes-r2, message=FALSE, warning=FALSE}
+bayes_R2(model_urban_krig)
+```
+
+Finally, the fitted model object was saved for later use in the results section, including posterior summaries, model diagnostics, and marginal effect plots.
+
+```{r save-beta-model, message=FALSE, warning=FALSE}
+saveRDS(model_urban_krig, "outputs/model_urban_krig.rds")
+```
+
+Overall, this model estimates the adjusted association between school place accessibility and active school travel in urban Small Areas. The model accounts for demographic composition through standardised ILR-transformed covariates and allows non-linear associations for the two school accessibility variables using natural cubic splines. The results are interpreted using posterior credible intervals and predicted values on the response scale.
+
 
 ## 3.5 Normalisation by School:Age Population
 
@@ -69,7 +546,7 @@ However, you can also use **bookdown** extensions mechanism for this.
 
 ## 4.3 Kriging vs Travel Time Comparison
 
-## 4.4 Model Results — Urban Areas,rural if possible
+## 4.4 Model Results — Urban Areas
 
 ## 4.5 Effect of Walking Accessibility on Active Travel
 
