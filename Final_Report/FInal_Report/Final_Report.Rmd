@@ -124,7 +124,7 @@ library(gstat)
 library(knitr)
 
 # Load objects created by the kriging script
-obj <- readRDS("outputs/combined_kriging_objects.rds")
+obj <- readRDS("../outputs/combined_kriging_objects.rds")
 
 dat_irl          <- obj$dat_irl
 variogram_emp    <- obj$variogram
@@ -570,7 +570,7 @@ bayes_R2(model_urban_krig)
 Finally, the fitted model object was saved for later use in the results section, including posterior summaries, model diagnostics, and marginal effect plots.
 
 ```{r save-beta-model, message=FALSE, warning=FALSE}
-saveRDS(model_urban_krig, "outputs/model_urban_krig.rds")
+saveRDS(model_urban_krig, "../outputs/model_urban_krig.rds")
 ```
 
 Overall, this model estimates the adjusted association between school place accessibility and active school travel in urban Small Areas. The model accounts for demographic composition through standardised ILR-transformed covariates and allows non-linear associations for the two school accessibility variables using natural cubic splines. The results are interpreted using posterior credible intervals and predicted values on the response scale.
