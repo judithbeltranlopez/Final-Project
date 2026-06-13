@@ -4,6 +4,7 @@ library(sp)
 library(gstat)
 library(readxl)
 library(readr)
+library(scales)
 library(stringr)
 library(janitor)
 

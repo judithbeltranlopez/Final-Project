@@ -123,7 +123,7 @@ linear_predictors <- z_ilr_vars
 
 # Spline terms for kriging and density
 spline_terms <- c(
-  "ns(krig_value_per_1000_3_18, df = 3)",
+  "ns(krig_value_per_100_3_18, df = 3)",
   "ns(places_density_km2, df = 3)"
 )
 
@@ -237,27 +237,36 @@ mcmc_plot(model_urban_krig, type = "neff")
 # 9. Marginal prediction for krig_value spline
 # ============================================================
 
-model_predictors <- all.vars(formula_beta)[-1]
+# Variables used in the model
+model_predictors <- all.vars(formula_beta)
 
-krig_mean <- mean(df_urban_model$krig_value_per_1000_3_18, na.rm = TRUE)
-krig_sd <- sd(df_urban_model$krig_value_per_1000_3_18, na.rm = TRUE)
+# Remove response and weight variable if present
+model_predictors <- setdiff(
+  model_predictors,
+  c("perc_active_beta", "prop_weight")
+)
 
+# Create a baseline row:
+# numeric predictors fixed at their mean
+newdata_base <- df_urban_model %>%
+  summarise(
+    across(
+      all_of(model_predictors),
+      ~ mean(.x, na.rm = TRUE)
+    )
+  )
+
+# Grid of kriging values in the ORIGINAL scale
 krig_grid <- seq(
-  quantile(df_urban_model$krig_value_per_1000_3_18, 0.01, na.rm = TRUE),
-  quantile(df_urban_model$krig_value_per_1000_3_18, 0.99, na.rm = TRUE),
+  quantile(df_urban_model$krig_value_per_100_3_18, 0.01, na.rm = TRUE),
+  quantile(df_urban_model$krig_value_per_100_3_18, 0.99, na.rm = TRUE),
   length.out = 100
 )
 
-newdata_krig <- as_tibble(
-  matrix(0, nrow = length(krig_grid), ncol = length(model_predictors))
-)
-
-names(newdata_krig) <- model_predictors
-
-newdata_krig <- newdata_krig %>%
+# Repeat the baseline row and replace kriging variable
+newdata_krig <- newdata_base[rep(1, length(krig_grid)), ] %>%
   mutate(
-    krig_value_per_1000_3_18 = krig_grid,
-    krig_value_original = krig_value_per_1000_3_18 * krig_sd + krig_mean
+    krig_value_per_100_3_18 = krig_grid
   )
 
 pred_krig <- fitted(
@@ -277,14 +286,14 @@ plot_krig <- bind_cols(
     Q97.5_pct = Q97.5 * 100
   )
 
-ggplot(plot_krig, aes(x = krig_value_original, y = Estimate_pct)) +
+ggplot(plot_krig, aes(x = krig_value_per_100_3_18, y = Estimate_pct)) +
   geom_ribbon(aes(ymin = Q2.5_pct, ymax = Q97.5_pct), alpha = 0.2) +
   geom_line(linewidth = 1) +
   labs(
     title = "Spline effect of kriged school accessibility",
-    subtitle = "Other predictors fixed at their standardized average value",
-    x = "Kriged school accessibility",
-    y = "Predicted active percentage"
+    subtitle = "Other predictors fixed at their average value",
+    x = "Kriged school accessibility per 100 children aged 3–18",
+    y = "Predicted active travel percentage"
   ) +
   theme_minimal(base_size = 13)
 ```
