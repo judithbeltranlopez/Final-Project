@@ -24,9 +24,9 @@ variogram_width  <- 5000
 variogram_cutoff <- 200000
 vgm_start <- gstat::vgm(
   psill  = 0.8,
-  model  = "Exp",
-  range  = 80000,
-  nugget = 0.1
+  model  = "Gau",
+  range  = 40000,
+  nugget = 0.3
 )
 
 nmax_kriging <- 150
@@ -136,9 +136,29 @@ prepare_school_kriging_data <- function(
   df_sp$x <- xy[, 1]
   df_sp$y <- xy[, 2]
   
+  # Check multiple schools at exactly the same location
+  duplicate_locations <- df_sp %>%
+    group_by(x, y) %>%
+    summarise(
+      n_schools_same_location = n(),
+      enrolment_total = sum(enrolment, na.rm = TRUE),
+      enrolment_mean = mean(enrolment, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    filter(n_schools_same_location > 1) %>%
+    arrange(desc(n_schools_same_location), desc(enrolment_total))
+  
+  # If multiple real schools share coordinates, sum enrolment first.
+  # Do not average log-enrolment.
   schools_agg_df <- df_sp %>%
     group_by(x, y) %>%
-    summarise(log_enrol = mean(log_enrol, na.rm = TRUE), .groups = "drop")
+    summarise(
+      n_schools_same_location = n(),
+      enrolment_total = sum(enrolment, na.rm = TRUE),
+      log_enrol = log(enrolment_total),
+      .groups = "drop"
+    ) %>%
+    filter(is.finite(log_enrol), enrolment_total > 0)
   
   coordinates(schools_agg_df) <- ~ x + y
   proj4string(schools_agg_df) <- proj4string(schools_sp)
@@ -148,9 +168,10 @@ prepare_school_kriging_data <- function(
   }
   
   list(
-    region_sf      = region_sf,
+    region_sf = region_sf,
     schools_agg_sp = schools_agg_df,
-    schools_agg_sf = st_as_sf(schools_agg_df)
+    schools_agg_sf = st_as_sf(schools_agg_df),
+    duplicate_locations = duplicate_locations
   )
 }
 
@@ -246,7 +267,13 @@ run_sa_3x3_kriging <- function(
       local_cell_id = prediction_points_sf$local_cell_id,
       sa_sample_id = prediction_points_sf$sa_sample_id,
       area_w = prediction_points_sf$area_w,
-      enrol_pred = exp(var1.pred)
+      # Naive back-transformation from log scale
+      enrol_pred_naive = exp(var1.pred),
+      
+      # Bias-corrected back-transformation.
+      # This partly addresses the issue that exp(predicted log value)
+      # underestimates the mean on the original scale.
+      enrol_pred = exp(var1.pred + 0.5 * pmax(var1.var, 0))
     )
   
   join_cols <- unique(c(sa_id, "SA_PUB2022"))
@@ -393,12 +420,12 @@ prepare_saps_variables <- function(saps_path) {
       pct_tertiary = safe_divide(100 * (T10_4_HCT + T10_4_HDPQT + T10_4_PDT + T10_4_DT), total_edu),
       pct_still_in_edu = safe_divide(100 * T10_2_SAST, total_pop)
     ) %>%
-    filter(total_pop <= 950) %>%
     select(
       SA_PUB2022,
       category,
       urban_rural,
       pop_3_18,
+      denom_active,
       perc_active,
       total_pop,
       pct_0_12,
@@ -486,10 +513,10 @@ final_sf <- res_sa$sa_with_krig %>%
     
     # Normalised kriging value by population aged 3 to 18
     krig_value_per_child_3_18 = safe_divide(krig_value_raw, pop_3_18),
-    krig_value_per_1000_3_18 = 1000 * krig_value_per_child_3_18,
+    krig_value_per_100_3_18 = 100 * krig_value_per_child_3_18,
     
     # If you want krig_value itself to be the normalised variable:
-    krig_value = krig_value_per_1000_3_18,
+    krig_value = krig_value_per_100_3_18,
     
     # Optional density variables
     places_density_km2 = safe_divide(krig_value_raw, area_km2),
@@ -499,24 +526,100 @@ final_sf <- res_sa$sa_with_krig %>%
     krig_value_raw_z = as.numeric(scale(krig_value_raw))
   )
 
-final_df <- final_sf %>%
+
+
+# ------------------------------------------------------------
+# Create unfiltered dataset first
+# ------------------------------------------------------------
+
+final_df_unfiltered <- final_sf %>%
   st_drop_geometry() %>%
+  mutate(
+    has_required_model_inputs =
+      !is.na(urban_rural) &
+      !is.na(perc_active) &
+      is.finite(krig_value_per_100_3_18) &
+      krig_value_per_100_3_18 > 0 &
+      is.finite(krig_value_raw) &
+      krig_value_raw > 0 &
+      is.finite(pop_3_18) &
+      is.finite(total_pop) &
+      is.finite(denom_active) &
+      denom_active > 0,
+    
+    exclude_total_pop_gt_900 = is.finite(total_pop) & total_pop > 900,
+    exclude_pop_3_18_lt_5 = is.finite(pop_3_18) & pop_3_18 < 5
+  )
+
+# ------------------------------------------------------------
+# Record number and proportion of CSAs excluded
+# ------------------------------------------------------------
+
+exclusion_summary <- final_df_unfiltered %>%
+  summarise(
+    n_total_small_areas = n(),
+    
+    n_missing_required_inputs = sum(!has_required_model_inputs, na.rm = TRUE),
+    pct_missing_required_inputs = 100 * n_missing_required_inputs / n_total_small_areas,
+    
+    n_total_pop_gt_900 = sum(exclude_total_pop_gt_900, na.rm = TRUE),
+    pct_total_pop_gt_900 = 100 * n_total_pop_gt_900 / n_total_small_areas,
+    
+    n_pop_3_18_lt_5 = sum(exclude_pop_3_18_lt_5, na.rm = TRUE),
+    pct_pop_3_18_lt_5 = 100 * n_pop_3_18_lt_5 / n_total_small_areas,
+    
+    n_both_filters = sum(
+      exclude_total_pop_gt_900 & exclude_pop_3_18_lt_5,
+      na.rm = TRUE
+    ),
+    pct_both_filters = 100 * n_both_filters / n_total_small_areas,
+    
+    n_retained_after_filters = sum(
+      has_required_model_inputs &
+        !exclude_total_pop_gt_900 &
+        !exclude_pop_3_18_lt_5,
+      na.rm = TRUE
+    ),
+    pct_retained_after_filters = 100 * n_retained_after_filters / n_total_small_areas,
+    
+    n_retained_urban_after_filters = sum(
+      has_required_model_inputs &
+        !exclude_total_pop_gt_900 &
+        !exclude_pop_3_18_lt_5 &
+        urban_rural == "Urban",
+      na.rm = TRUE
+    )
+  )
+
+# ------------------------------------------------------------
+# Apply Neil's filters
+# 1. Remove CSAs with total population > 900
+# 2. Remove CSAs with population aged 3-18 < 5
+# ------------------------------------------------------------
+
+final_df <- final_df_unfiltered %>%
   filter(
-    !is.na(urban_rural),
-    !is.na(perc_active),
-    is.finite(krig_value),
-    krig_value > 0,
-    is.finite(pop_3_18),
-    pop_3_18 > 0
+    has_required_model_inputs,
+    !exclude_total_pop_gt_900,
+    !exclude_pop_3_18_lt_5
+  ) %>%
+  mutate(
+    # Weight for beta regression.
+    # Equivalent to sqrt(denom_active), normalised to average 1.
+    prop_weight = sqrt(denom_active) / mean(sqrt(denom_active), na.rm = TRUE)
   ) %>%
   select(
     SA_PUB2022,
     category,
     urban_rural,
     perc_active,
+    denom_active,
+    prop_weight,
     
-    # Normalised kriging value: predicted value per 1000 children aged 3-18
+    # Main normalised kriging exposure: per 100 children aged 3-18
     krig_value,
+    krig_value_per_100_3_18,
+    krig_value_per_child_3_18,
     
     # Raw kriging value before normalisation
     krig_value_raw,
@@ -525,12 +628,11 @@ final_df <- final_sf %>%
     n_samples,
     area_km2,
     pop_3_18,
+    total_pop,
     places_density_km2,
-    krig_value_per_child_3_18,
-    krig_value_per_1000_3_18,
     krig_value_z,
     krig_value_raw_z,
-    total_pop,
+    
     pct_0_12,
     pct_13_21,
     pct_22_40,
@@ -547,8 +649,13 @@ final_df <- final_sf %>%
     pct_still_in_edu
   )
 
+# Urban-only dataset for modelling
+# Recalculate weights so that the average weight is 1 in the urban model sample
 final_df_urban <- final_df %>%
-  filter(urban_rural == "Urban")
+  filter(urban_rural == "Urban") %>%
+  mutate(
+    prop_weight = sqrt(denom_active) / mean(sqrt(denom_active), na.rm = TRUE)
+  )
 
 # -----------------------------
 # 8) Save outputs
@@ -570,8 +677,10 @@ saveRDS(
     kriged_points_sf = res_sa$kriged_points_sf,
     sa_with_krig = res_sa$sa_with_krig,
     final_sf = final_sf,
+    final_df_unfiltered = final_df_unfiltered,
     final_df = final_df,
-    final_df_urban = final_df_urban
+    final_df_urban = final_df_urban,
+    exclusion_summary = exclusion_summary
   ),
   file.path(output_dir, "combined_kriging_objects.rds")
 )
@@ -580,29 +689,264 @@ saveRDS(
 # 9) Checks
 # -----------------------------
 cat("\nSaved outputs in:", output_dir, "\n")
-cat("Final dataset rows:", nrow(final_df), "\n")
+cat("Final filtered dataset rows:", nrow(final_df), "\n")
 cat("Urban-only rows:", nrow(final_df_urban), "\n")
 
+cat("\nExclusion summary:\n")
+print(exclusion_summary)
+
+cat("\nKriging summary after filtering:\n")
 print(
   final_df %>%
     summarise(
       n = n(),
-      missing_krig = sum(is.na(krig_value)),
+      missing_krig = sum(is.na(krig_value_per_100_3_18)),
       missing_perc_active = sum(is.na(perc_active)),
-      min_krig = min(krig_value, na.rm = TRUE),
-      max_krig = max(krig_value, na.rm = TRUE),
-      min_krig_norm = min(krig_density_per_1000_3_18, na.rm = TRUE),
-      max_krig_norm = max(krig_density_per_1000_3_18, na.rm = TRUE)
+      
+      min_krig_raw = min(krig_value_raw, na.rm = TRUE),
+      median_krig_raw = median(krig_value_raw, na.rm = TRUE),
+      max_krig_raw = max(krig_value_raw, na.rm = TRUE),
+      
+      min_krig_per_100 = min(krig_value_per_100_3_18, na.rm = TRUE),
+      median_krig_per_100 = median(krig_value_per_100_3_18, na.rm = TRUE),
+      max_krig_per_100 = max(krig_value_per_100_3_18, na.rm = TRUE),
+      
+      min_pop_3_18 = min(pop_3_18, na.rm = TRUE),
+      median_pop_3_18 = median(pop_3_18, na.rm = TRUE),
+      max_pop_3_18 = max(pop_3_18, na.rm = TRUE),
+      
+      min_denom_active = min(denom_active, na.rm = TRUE),
+      median_denom_active = median(denom_active, na.rm = TRUE),
+      max_denom_active = max(denom_active, na.rm = TRUE),
+      
+      min_prop_weight = min(prop_weight, na.rm = TRUE),
+      median_prop_weight = median(prop_weight, na.rm = TRUE),
+      max_prop_weight = max(prop_weight, na.rm = TRUE)
     )
 )
 
 
 
+# ============================================================
+# Diagnostic maps: Ireland and Galway kriging values
+# ============================================================
 
 
+# ------------------------------------------------------------
+# 1. Prepare plotting objects
+# ------------------------------------------------------------
 
+# Use unfiltered final_sf so you can see all areas before exclusions
+final_sf_plot <- final_sf %>%
+  st_make_valid() %>%
+  filter(
+    is.finite(krig_value_raw),
+    is.finite(krig_value_per_100_3_18),
+    is.finite(pop_3_18)
+  ) %>%
+  mutate(
+    # Cap colour scales at 99th percentile to make spatial patterns visible
+    krig_raw_cap = pmin(
+      krig_value_raw,
+      quantile(krig_value_raw, 0.99, na.rm = TRUE)
+    ),
+    krig_per100_cap = pmin(
+      krig_value_per_100_3_18,
+      quantile(krig_value_per_100_3_18, 0.99, na.rm = TRUE)
+    )
+  )
 
+# School points used in kriging
+schools_plot <- dat_irl$schools_agg_sf %>%
+  st_transform(st_crs(final_sf_plot)) %>%
+  mutate(
+    enrolment_plot = case_when(
+      "enrolment_total" %in% names(.) ~ enrolment_total,
+      "log_enrol" %in% names(.) ~ exp(log_enrol),
+      TRUE ~ NA_real_
+    )
+  )
 
+# ------------------------------------------------------------
+# 2. Galway boundary from county shapefile
+# ------------------------------------------------------------
+
+counties_sf <- st_read(counties_shp_path, quiet = TRUE) %>%
+  st_transform(st_crs(final_sf_plot)) %>%
+  st_make_valid()
+
+galway_boundary <- counties_sf %>%
+  filter(
+    str_detect(NAME_1, regex("Galway", ignore_case = TRUE)) |
+      str_detect(NAME_2, regex("Galway", ignore_case = TRUE))
+  ) %>%
+  st_union() %>%
+  st_as_sf() %>%
+  mutate(county = "Galway")
+
+# Small Areas intersecting Galway
+galway_sf_plot <- final_sf_plot[galway_boundary, ]
+
+# Schools in Galway
+schools_galway <- schools_plot[galway_boundary, ]
+
+# ------------------------------------------------------------
+# 3. Ireland map: raw kriging
+# ------------------------------------------------------------
+
+p_ireland_raw <- ggplot() +
+  geom_sf(
+    data = final_sf_plot,
+    aes(fill = krig_raw_cap),
+    colour = NA
+  ) +
+  scale_fill_viridis_c(
+    name = "Raw kriged\nvalue",
+    labels = label_number(big.mark = ",")
+  ) +
+  labs(
+    title = "Raw kriged school-place intensity",
+    subtitle = "Ireland, colour capped at 99th percentile for readability"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold")
+  )
+
+p_ireland_raw
+
+# ------------------------------------------------------------
+# 4. Ireland map: normalised kriging per 100 children
+# ------------------------------------------------------------
+
+p_ireland_norm <- ggplot() +
+  geom_sf(
+    data = final_sf_plot,
+    aes(fill = krig_per100_cap),
+    colour = NA
+  ) +
+  scale_fill_viridis_c(
+    name = "Kriged density\nper 100 children",
+    labels = label_number(big.mark = ",")
+  ) +
+  labs(
+    title = "Normalised kriged school-place density",
+    subtitle = "Per 100 children aged 3–18, colour capped at 99th percentile"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold")
+  )
+
+p_ireland_norm
+
+# ------------------------------------------------------------
+# 5. Galway map: raw kriging
+# ------------------------------------------------------------
+
+p_galway_raw <- ggplot() +
+  geom_sf(
+    data = galway_sf_plot,
+    aes(fill = krig_raw_cap),
+    colour = NA
+  ) +
+  geom_sf(
+    data = galway_boundary,
+    fill = NA,
+    colour = "black",
+    linewidth = 0.4
+  ) +
+  scale_fill_viridis_c(
+    name = "Raw kriged\nvalue",
+    labels = label_number(big.mark = ",")
+  ) +
+  labs(
+    title = "Raw kriged school-place intensity",
+    subtitle = "Galway"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold")
+  )
+
+p_galway_raw
+
+# ------------------------------------------------------------
+# 6. Galway map: normalised kriging per 100 children
+# ------------------------------------------------------------
+
+p_galway_norm <- ggplot() +
+  geom_sf(
+    data = galway_sf_plot,
+    aes(fill = krig_per100_cap),
+    colour = NA
+  ) +
+  geom_sf(
+    data = galway_boundary,
+    fill = NA,
+    colour = "black",
+    linewidth = 0.4
+  ) +
+  scale_fill_viridis_c(
+    name = "Kriged density\nper 100 children",
+    labels = label_number(big.mark = ",")
+  ) +
+  labs(
+    title = "Normalised kriged school-place density",
+    subtitle = "Galway, per 100 children aged 3–18"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold")
+  )
+
+p_galway_norm
+
+# ------------------------------------------------------------
+# 7. Galway map with school points overlaid
+# ------------------------------------------------------------
+
+p_galway_schools <- ggplot() +
+  geom_sf(
+    data = galway_sf_plot,
+    aes(fill = krig_per100_cap),
+    colour = NA
+  ) +
+  geom_sf(
+    data = galway_boundary,
+    fill = NA,
+    colour = "black",
+    linewidth = 0.4
+  ) +
+  geom_sf(
+    data = schools_galway,
+    aes(size = enrolment_plot),
+    colour = "red",
+    alpha = 0.75
+  ) +
+  scale_fill_viridis_c(
+    name = "Kriged density\nper 100 children",
+    labels = label_number(big.mark = ",")
+  ) +
+  scale_size_continuous(
+    name = "School enrolment",
+    range = c(0.6, 3)
+  ) +
+  labs(
+    title = "Galway kriging values with school locations",
+    subtitle = "Normalised kriging per 100 children aged 3–18; red points are schools"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold")
+  )
+
+p_galway_schools
 
 
 

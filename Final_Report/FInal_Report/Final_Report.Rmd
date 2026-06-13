@@ -70,16 +70,11 @@ The settlement-level census data were linked to spatial boundary data using CSO 
 
 The census travel tables were used to calculate the proportion of people travelling to education by active modes. Active travel was defined as walking or cycling. The active travel percentage was calculated as:
 
-[
-\text{Active travel percentage} =
-100 \times
-\frac{
-\text{Number travelling by foot} + \text{Number travelling by bicycle}
-}{
-\text{Total travelling to education, excluding not stated and not applicable categories}
-}
-]
+The active travel percentage was calculated as:
 
+$$
+100 \times \frac{Walking + Cycling}{Total - Not\ stated - Not\ applicable}
+$$
 This measure was used to describe variation in active travel to education across settlements and to provide contextual evidence for the later Small Area-level modelling. The settlement-level data were particularly useful for understanding broader urban patterns, while the Small Area SAPS data were used in the main statistical modelling because they provide a finer spatial resolution and can be linked directly to the school accessibility measures.
 
 In addition to travel mode, Census 2022 SAPS data were used to derive demographic covariates for the statistical model. These included age composition, car availability, educational attainment, population aged 3–18 years, total population, and urban–rural classification. The population aged 3–18 years was used to normalise the kriging-derived school place measure, producing a school place density variable per 1,000 children. Urban–rural classification was used to restrict the main modelling analysis to urban Small Areas, which were the focus population of the study.
@@ -105,15 +100,11 @@ Instead of predicting only at the centroid of each Census Small Area, each Small
 
 The raw kriging output was back-transformed from the log scale using the exponential function. This produced a raw spatially interpolated estimate of school place intensity. However, because Small Areas differ in the number of children living in them, this raw value was normalised by the Census 2022 population aged 3–18 years. The final school place density variable was expressed as predicted school place intensity per 1,000 children aged 3–18:
 
-[
-\text{School place density}*{i} =
-1000 \times
-\frac{
-\text{Raw kriged school place value}*{i}
-}{
-\text{Population aged 3--18}_{i}
-}
-]
+
+$$
+SchoolDensity_i =
+1000 \times \frac{RawKrigedValue_i}{PopulationAged3to18_i}
+$$
 
 Higher values indicate greater predicted school place availability relative to the local school-age population. Lower values indicate lower predicted availability relative to potential local demand. This normalised variable was used in the later statistical modelling as the main school place accessibility exposure.
 
@@ -124,7 +115,7 @@ library(gstat)
 library(knitr)
 
 # Load objects created by the kriging script
-obj <- readRDS("../outputs/combined_kriging_objects.rds")
+obj <- readRDS("../../outputs/combined_kriging_objects.rds")
 
 dat_irl          <- obj$dat_irl
 variogram_emp    <- obj$variogram
@@ -344,9 +335,7 @@ Exact zero values cannot be used directly in log-ratio transformations because t
 
 In this study, the ILR transformation was applied to demographic variables describing the composition of urban Small Areas. The transformed ILR coordinates were then used as covariates in the statistical model instead of the original percentage variables. This approach reduces collinearity between demographic percentages and ensures that the regression model respects the relative nature of compositional data.
 
-```{r ilr-transformation, message=FALSE, warning=FALSE}
-library(tidyverse)
-library(compositions)
+```{r ilr-transformation, eval=FALSE}
 
 # Demographic compositional variables
 cols <- c(
@@ -420,7 +409,7 @@ Beta regression is appropriate for this analysis because the response variable r
 
 Before fitting the model, the active travel percentage was converted from a percentage to a proportion. Since the beta distribution cannot handle exact values of 0 or 1, the transformed response was adjusted slightly so that all observations lay strictly between 0 and 1.
 
-```{r beta-response-preparation, message=FALSE, warning=FALSE}
+```{r beta-response-preparation, message=FALSE, warning=FALSE, eval=FALSE}
 df_urban_model <- df_urban_model %>%
   mutate(
     perc_active_prop = perc_active / 100,
@@ -434,64 +423,30 @@ The model was fitted only to urban Small Areas, as these were the main populatio
 
 The school accessibility variables were included using natural cubic spline terms. This allowed the relationship between school accessibility and active travel to be non-linear. This is important because the effect of school place accessibility may not be constant across its full range. For example, increases in accessibility may be strongly associated with active travel at lower values, but the association may flatten at higher values. Natural cubic splines allow this type of flexible relationship while avoiding the assumption of a purely linear effect.
 
-Two spline terms were included:
-
-[
-ns(\text{school place density per 1,000 children aged 3--18}, df = 3)
-]
-
-and
-
-[
-ns(\text{school places per km}^2, df = 3)
-]
+Two natural cubic spline terms were included in the model. The first was `ns(krig_value_per_1000_3_18, df = 3)`, which represents school place density per 1,000 children aged 3-18. The second was `ns(places_density_km2, df = 3)`, which represents predicted school places per square kilometre. Both spline terms used three degrees of freedom, allowing flexible but controlled non-linear relationships with active school travel.
 
 The first term represents school place availability relative to the local school-age population. The second term represents spatial density of predicted school places per square kilometre. Including both terms allows the model to distinguish between accessibility relative to population demand and the spatial concentration of school places.
 
 The fitted model can be written as:
 
-[
-y_i \sim \text{Beta}(\mu_i, \phi)
-]
+$$
+y_i \sim \mathrm{Beta}(\mu_i, \phi)
+$$
 
-[
-\text{logit}(\mu_i) =
+$$
+\mathrm{logit}(\mu_i) =
 \alpha +
 \sum_{j=1}^{p} \beta_j Z_{ij}
 +
 f_1(K_i)
 +
 f_2(D_i)
-]
+$$
+where (y_i) is the active travel proportion in urban Small Area (i), ($\mu_i$) is the expected active travel proportion, and ($\phi$) is the beta precision parameter. The terms (Z_{ij}) represent the standardised ILR demographic covariates. The function (f_1(K_i)) represents the natural spline for school place density per 1,000 children aged 3–18, and (f_2(D_i)) represents the natural spline for school places per square kilometre.
 
-where (y_i) is the active travel proportion in urban Small Area (i), (\mu_i) is the expected active travel proportion, and (\phi) is the beta precision parameter. The terms (Z_{ij}) represent the standardised ILR demographic covariates. The function (f_1(K_i)) represents the natural spline for school place density per 1,000 children aged 3–18, and (f_2(D_i)) represents the natural spline for school places per square kilometre.
+Weakly informative priors were used for the model parameters. A normal prior with mean 0 and standard deviation 1 was assigned to the regression coefficients. This prior regularises the model by discouraging unrealistically large effects while still allowing the data to influence the posterior estimates. The intercept was assigned a wider normal prior with mean 0 and standard deviation 2.5 on the logit scale. The beta precision parameter, ($\phi$), was assigned an exponential prior to ensure that it remains positive.
 
-```{r beta-model-formula, message=FALSE, warning=FALSE}
-library(brms)
-library(splines)
-
-# Linear ILR terms
-linear_predictors <- z_ilr_vars
-
-# Natural cubic spline terms for kriging-derived accessibility variables
-spline_terms <- c(
-  "ns(krig_value_per_1000_3_18, df = 3)",
-  "ns(places_density_km2, df = 3)"
-)
-
-formula_beta <- as.formula(
-  paste(
-    "perc_active_beta ~",
-    paste(c(linear_predictors, spline_terms), collapse = " + ")
-  )
-)
-
-formula_beta
-```
-
-Weakly informative priors were used for the model parameters. A normal prior with mean 0 and standard deviation 1 was assigned to the regression coefficients. This prior regularises the model by discouraging unrealistically large effects while still allowing the data to influence the posterior estimates. The intercept was assigned a wider normal prior with mean 0 and standard deviation 2.5 on the logit scale. The beta precision parameter, (\phi), was assigned an exponential prior to ensure that it remains positive.
-
-```{r beta-model-priors, message=FALSE, warning=FALSE}
+```{r beta-model-priors, message=FALSE,eval=FALSE, warning=FALSE}
 priors <- c(
   prior(normal(0, 1), class = "b"),
   prior(normal(0, 2.5), class = "Intercept"),
@@ -503,7 +458,7 @@ priors
 
 The Bayesian beta regression model was fitted using the `brms` package. The model was run with four Markov chains, 4,000 iterations per chain, and 1,000 warm-up iterations. The `adapt_delta` parameter was set to 0.97 and the maximum tree depth was set to 12 to improve Hamiltonian Monte Carlo sampling and reduce the risk of divergent transitions.
 
-```{r fit-beta-regression-model, message=FALSE, warning=FALSE}
+```{r fit-beta-regression-model, message=FALSE, warning=FALSE, eval=FALSE}
 model_urban_krig <- brm(
   formula = formula_beta,
   data = df_urban_model,
@@ -523,55 +478,30 @@ model_urban_krig <- brm(
 
 The logit link was used so that the expected active travel proportion remains between 0 and 1. Coefficients from the model are therefore estimated on the log-odds scale. For this reason, the main interpretation of the model was based on predicted values and marginal effect plots on the response scale rather than on the raw coefficient values alone.
 
-Model convergence was assessed using standard Bayesian diagnostics. These included (\hat{R}), effective sample size, trace plots, divergent transitions, and posterior predictive checks. Values of (\hat{R}) close to 1 indicate that the chains mixed well. Large effective sample sizes indicate that the posterior summaries are reliable. Posterior predictive checks were used to assess whether the model could reproduce the observed distribution of active travel.
+Model convergence was assessed using standard Bayesian diagnostics. These included ($\hat{R}$), effective sample size, trace plots, divergent transitions, and posterior predictive checks. Values of ($\hat{R}$) close to 1 indicate that the chains mixed well. Large effective sample sizes indicate that the posterior summaries are reliable. Posterior predictive checks were used to assess whether the model could reproduce the observed distribution of active travel.
 
-```{r beta-model-summary, message=FALSE, warning=FALSE}
+```{r beta-model-summary, message=FALSE, eval=FALSE,warning=FALSE}
 summary(model_urban_krig)
 ```
 
-```{r beta-model-traceplots, fig.cap="Trace plots for the Bayesian beta regression model. Good mixing across chains indicates that the posterior distribution was explored adequately.", message=FALSE, warning=FALSE}
+```{r beta-model-traceplots, fig.cap="Trace plots for the Bayesian beta regression model. Good mixing across chains indicates that the posterior distribution was explored adequately.", message=FALSE, warning=FALSE, eval=FALSE}
 plot(model_urban_krig)
 ```
 
-```{r beta-model-posterior-predictive-check, fig.cap="Posterior predictive check for the Bayesian beta regression model. The observed active travel distribution is compared with replicated datasets simulated from the fitted model.", message=FALSE, warning=FALSE}
+```{r beta-model-posterior-predictive-check, fig.cap="Posterior predictive check for the Bayesian beta regression model. The observed active travel distribution is compared with replicated datasets simulated from the fitted model.", message=FALSE, warning=FALSE, eval=FALSE}
 pp_check(model_urban_krig, ndraws = 100)
 ```
 
-```{r beta-model-divergences, message=FALSE, warning=FALSE}
-nuts_params(model_urban_krig) %>%
-  filter(Parameter == "divergent__") %>%
-  summarise(n_divergences = sum(Value))
-```
 
 The estimated relationship between school place accessibility and active travel was visualised using conditional effect plots. These plots show the expected active travel percentage across the range of each accessibility variable while holding the other covariates constant. They are more interpretable than the raw spline coefficients because spline coefficients do not represent simple one-unit changes.
 
-```{r beta-conditional-effect-krig, fig.cap="Estimated relationship between school place density per 1,000 children aged 3–18 and active school travel in urban Small Areas. The relationship is modelled using a natural cubic spline.", message=FALSE, warning=FALSE}
-conditional_effects(
-  model_urban_krig,
-  effects = "krig_value_per_1000_3_18"
-) %>%
-  plot(points = TRUE)
-```
-
-```{r beta-conditional-effect-density, fig.cap="Estimated relationship between predicted school places per square kilometre and active school travel in urban Small Areas. The relationship is modelled using a natural cubic spline.", message=FALSE, warning=FALSE}
-conditional_effects(
-  model_urban_krig,
-  effects = "places_density_km2"
-) %>%
-  plot(points = TRUE)
-```
-
 Bayesian (R^2) was used as an additional summary of model fit. This gives an approximate measure of the proportion of variation in active travel explained by the model.
 
-```{r beta-model-bayes-r2, message=FALSE, warning=FALSE}
+```{r beta-model-bayes-r2, message=FALSE, eval=FALSE ,warning=FALSE}
 bayes_R2(model_urban_krig)
 ```
 
 Finally, the fitted model object was saved for later use in the results section, including posterior summaries, model diagnostics, and marginal effect plots.
-
-```{r save-beta-model, message=FALSE, warning=FALSE}
-saveRDS(model_urban_krig, "../outputs/model_urban_krig.rds")
-```
 
 Overall, this model estimates the adjusted association between school place accessibility and active school travel in urban Small Areas. The model accounts for demographic composition through standardised ILR-transformed covariates and allows non-linear associations for the two school accessibility variables using natural cubic splines. The results are interpreted using posterior credible intervals and predicted values on the response scale.
 
@@ -584,19 +514,13 @@ To account for local demand, the raw kriged school place value was divided by th
 
 The final normalised school place accessibility measure was calculated as:
 
-[
-\text{School place density per 1,000 children}_{i}
-==================================================
-
+$$
+SchoolDensity_i =
 1000 \times
-\frac{
-\text{Raw kriged school place value}*{i}
-}{
-\text{Population aged 3--18}*{i}
-}
-]
+\frac{RawKrigedValue_i}{PopulationAged3to18_i}
+$$
 
-where (i) represents a Small Area.
+where `RawKrigedValue_i` is the raw kriging-derived school place value for Small Area `i`, and `PopulationAged3to18_i` is the number of residents aged 3 to 18 in that Small Area.
 
 Higher values indicate that an area has greater predicted school place availability relative to the number of children aged 3–18 living there. Lower values indicate that predicted school place availability is lower relative to the local school-age population. Therefore, this variable can be interpreted as a relative school accessibility measure rather than a simple measure of school concentration.
 
