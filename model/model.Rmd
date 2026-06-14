@@ -1,6 +1,8 @@
 ---
 title: "model"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 ```{r}
 library(tidyverse)
@@ -12,6 +14,7 @@ library(marginaleffects)
 library(collapse)
 library(compositions)
 library(splines)
+library(posterior)
 ```
 
 ```{r}
@@ -19,6 +22,16 @@ final_df <- readRDS("../outputs/final_df.rds")
 
 model_df <- final_df %>%
   sf::st_drop_geometry()
+
+# Joining the walking accessibility
+walk_df <- readRDS("D:/Final-Project/DATA/final_df_complete.rds") %>%
+  sf::st_drop_geometry() %>%
+  mutate(SA_PUB2022 = as.character(SA_PUB2022)) %>%
+  select(SA_PUB2022, access_walk_30)
+
+model_df <- model_df %>%
+  mutate(SA_PUB2022 = as.character(SA_PUB2022)) %>%
+  left_join(walk_df, by = "SA_PUB2022")
 
 # Focus on URBAN DATA
 df_urban <- model_df %>%
@@ -91,8 +104,14 @@ df_urban_model <- df_urban %>%
 df_urban_model <- df_urban_model %>%
   mutate(
     perc_active_prop = perc_active / 100,
-    perc_active_beta = (perc_active_prop * (nrow(.) - 1) + 0.5) / nrow(.)
-  )
+    perc_active_beta = (perc_active_prop * (nrow(.) - 1) + 0.5) / nrow(.),
+    access_walk_per_1000 = 1000 * (access_walk_30 / pop_3_18),
+    log10_walk_30        = log10(access_walk_per_1000 + 1)
+  ) %>%
+  filter(
+    is.finite(log10_walk_30),
+    pop_3_18 > 0,
+    access_walk_per_1000 < 100000)
 ```
 
 ```{r}
@@ -123,7 +142,7 @@ linear_predictors <- z_ilr_vars
 
 # Spline terms for kriging and density
 spline_terms <- c(
-  "ns(krig_value_per_100_3_18, df = 3)",
+  "ns(krig_value_per_1000_3_18, df = 3)",
   "ns(places_density_km2, df = 3)"
 )
 
@@ -232,41 +251,118 @@ mcmc_plot(model_urban_krig, type = "neff")
 
 ```
 
+
+```{r}
+# Travel time model
+formula_walk <- as.formula(
+  paste(
+    "perc_active_beta ~",
+    paste(c(
+      z_ilr_vars,
+      "ns(log10_walk_30, df = 3)",
+      "ns(places_density_km2, df = 3)"
+    ), collapse = " + ")
+  ) 
+)
+
+model_urban_walk <- brm(
+  formula = formula_walk,
+  data    = df_urban_model,
+  family  = Beta(link = "logit"),
+  prior   = priors,
+  chains  = 4,
+  iter    = 4000,
+  warmup  = 1000,
+  seed    = 123,
+  cores   = 4,
+  control = list(adapt_delta = 0.97, max_treedepth = 12)
+)
+```
+
+```{r}
+summary(model_urban_walk)
+plot(model_urban_walk)
+```
+
+```{r}
+draws_summary <- posterior::summarise_draws(model_urban_walk)
+
+rhat_bad <- draws_summary %>%
+  filter(!is.na(rhat), rhat > 1.01)
+
+ess_bad <- draws_summary %>%
+  filter(
+    !is.na(ess_bulk),
+    !is.na(ess_tail),
+    ess_bulk < 400 | ess_tail < 400
+  )
+
+nuts <- nuts_params(model_urban_walk)
+
+n_divergent <- nuts %>%
+  filter(Parameter == "divergent__") %>%
+  summarise(n = sum(Value)) %>%
+  pull(n)
+
+n_treedepth <- nuts %>%
+  filter(Parameter == "treedepth__") %>%
+  summarise(n = sum(Value >= 12)) %>%
+  pull(n)
+
+convergence_report <- tibble(
+  check = c(
+    "Rhat <= 1.01",
+    "Bulk and Tail ESS >= 400",
+    "No divergent transitions",
+    "No max treedepth hits"
+  ),
+  passed = c(
+    nrow(rhat_bad) == 0,
+    nrow(ess_bad) == 0,
+    n_divergent == 0,
+    n_treedepth == 0
+  ),
+  problem = c(
+    paste(rhat_bad$variable, collapse = ", "),
+    paste(ess_bad$variable, collapse = ", "),
+    as.character(n_divergent),
+    as.character(n_treedepth)
+  )
+)
+
+convergence_report
+
+mcmc_plot(model_urban_walk, type = "trace")
+mcmc_plot(model_urban_walk, type = "rhat")
+mcmc_plot(model_urban_walk, type = "neff")
+```
+
 ```{r}
 # ============================================================
 # 9. Marginal prediction for krig_value spline
 # ============================================================
 
-# Variables used in the model
-model_predictors <- all.vars(formula_beta)
+model_predictors <- all.vars(formula_beta)[-1]
 
-# Remove response and weight variable if present
-model_predictors <- setdiff(
-  model_predictors,
-  c("perc_active_beta", "prop_weight")
-)
+krig_mean <- mean(df_urban_model$krig_value_per_1000_3_18, na.rm = TRUE)
+krig_sd <- sd(df_urban_model$krig_value_per_1000_3_18, na.rm = TRUE)
 
-# Create a baseline row:
-# numeric predictors fixed at their mean
-newdata_base <- df_urban_model %>%
-  summarise(
-    across(
-      all_of(model_predictors),
-      ~ mean(.x, na.rm = TRUE)
-    )
-  )
-
-# Grid of kriging values in the ORIGINAL scale
 krig_grid <- seq(
-  quantile(df_urban_model$krig_value_per_100_3_18, 0.01, na.rm = TRUE),
-  quantile(df_urban_model$krig_value_per_100_3_18, 0.99, na.rm = TRUE),
+  quantile(df_urban_model$krig_value_per_1000_3_18, 0.01, na.rm = TRUE),
+  quantile(df_urban_model$krig_value_per_1000_3_18, 0.99, na.rm = TRUE),
   length.out = 100
 )
 
-# Repeat the baseline row and replace kriging variable
-newdata_krig <- newdata_base[rep(1, length(krig_grid)), ] %>%
+newdata_krig <- as_tibble(
+  matrix(0, nrow = length(krig_grid), ncol = length(model_predictors))
+)
+
+names(newdata_krig) <- model_predictors
+
+newdata_krig <- newdata_krig %>%
   mutate(
-    krig_value_per_100_3_18 = krig_grid
+    krig_value_per_1000_3_18 = krig_grid,
+    krig_value_original = krig_value_per_1000_3_18 * krig_sd + krig_mean
   )
 
 pred_krig <- fitted(
@@ -286,66 +382,48 @@ plot_krig <- bind_cols(
     Q97.5_pct = Q97.5 * 100
   )
 
-ggplot(plot_krig, aes(x = krig_value_per_100_3_18, y = Estimate_pct)) +
+ggplot(plot_krig, aes(x = krig_value_original, y = Estimate_pct)) +
   geom_ribbon(aes(ymin = Q2.5_pct, ymax = Q97.5_pct), alpha = 0.2) +
   geom_line(linewidth = 1) +
   labs(
     title = "Spline effect of kriged school accessibility",
-    subtitle = "Other predictors fixed at their average value",
-    x = "Kriged school accessibility per 100 children aged 3–18",
-    y = "Predicted active travel percentage"
+    subtitle = "Other predictors fixed at their standardized average value",
+    x = "Kriged school accessibility",
+    y = "Predicted active percentage"
   ) +
   theme_minimal(base_size = 13)
 ```
+
 ```{r}
-# ============================================================
-# Fitted vs observed values
-# ============================================================
+# Marginal plot Travel time 
+model_predictors_walk <- all.vars(formula_walk)[-1]
 
-# Keep only rows used for prediction
-model_vars <- all.vars(formula_beta)
+walk_grid <- seq(quantile(df_urban_model$log10_walk_30, 0.01, na.rm = TRUE),
+                 quantile(df_urban_model$log10_walk_30, 0.99, na.rm = TRUE),length.out = 100)
 
-df_fit_plot <- df_urban_model %>%
-  filter(if_all(all_of(model_vars), ~ !is.na(.x)))
+newdata_walk <- as_tibble(matrix(0, nrow = 100, ncol = length(model_predictors_walk)))
+names(newdata_walk) <- model_predictors_walk
+newdata_walk <- newdata_walk %>%
+  mutate(log10_walk_30 = walk_grid)
 
-# Posterior fitted mean for each observation
-fitted_values <- fitted(
-  model_urban_krig,
-  newdata = df_fit_plot,
-  scale = "response",
-  probs = c(0.025, 0.975)
-)
+pred_walk <- fitted(model_urban_walk, newdata = newdata_walk,scale = "response", probs = c(0.025, 0.975))
 
-df_fit_plot <- df_fit_plot %>%
-  bind_cols(as_tibble(fitted_values)) %>%
-  mutate(
-    observed_pct = perc_active,
-    fitted_pct = Estimate * 100,
-    fitted_lower_pct = Q2.5 * 100,
-    fitted_upper_pct = Q97.5 * 100,
-    residual_pct = observed_pct - fitted_pct
-  )
+plot_walk <- bind_cols(newdata_walk, as_tibble(pred_walk)) %>%
+  mutate(Estimate_pct = Estimate * 100,
+         Q2.5_pct     = Q2.5 * 100,
+         Q97.5_pct    = Q97.5 * 100)
 
-# Goodness-of-fit summaries
-fit_stats <- df_fit_plot %>%
-  summarise(
-    RMSE = sqrt(mean((observed_pct - fitted_pct)^2, na.rm = TRUE)),
-    MAE = mean(abs(observed_pct - fitted_pct), na.rm = TRUE),
-    correlation = cor(observed_pct, fitted_pct, use = "complete.obs")
-  )
-
-fit_stats
-
-# Scatter plot: fitted vs observed
-ggplot(df_fit_plot, aes(x = observed_pct, y = fitted_pct)) +
-  geom_point(alpha = 0.35) +
-  geom_abline(intercept = 0, slope = 1, linetype = "dashed", linewidth = 1) +
-  coord_equal(xlim = c(0, 100), ylim = c(0, 100)) +
+ggplot(plot_walk, aes(x = log10_walk_30, y = Estimate_pct)) +
+  geom_ribbon(aes(ymin = Q2.5_pct, ymax = Q97.5_pct), alpha = 0.2) +
+  geom_line(linewidth = 1) +
+  scale_x_continuous(
+     breaks = c(0, 1, 2, 3, 4),
+     labels = c("1", "10", "100", "1,000", "10,000")
+  ) +
   labs(
-    title = "Observed vs fitted active travel percentage",
-    subtitle = "Dashed line represents perfect prediction",
-    x = "Observed active percentage",
-    y = "Fitted active percentage"
+    title    = "walking accessibility effect on active travel",
+    x        = "School places reachable per 1,000 children",
+    y        = "Predicted active travel"
   ) +
   theme_minimal(base_size = 13)
 ```
@@ -354,7 +432,9 @@ ggplot(df_fit_plot, aes(x = observed_pct, y = fitted_pct)) +
 dir.create("data2", showWarnings = FALSE)
 dir.create("models", showWarnings = FALSE)
 
-saveRDS(df_urban_model, "data2/df_urban_model.rds")
+saveRDS(df_urban_model,   "data2/df_urban_model.rds")
 saveRDS(model_urban_krig, "models/model_urban_krig_splines.rds")
-saveRDS(formula_beta, "models/formula_beta_splines.rds")
+saveRDS(formula_beta,     "models/formula_beta_splines.rds")
+saveRDS(model_urban_walk, "models/model_urban_walk.rds")
+saveRDS(formula_walk,     "models/formula_walk.rds")
 ```
