@@ -2,8 +2,6 @@
 
 \usepackage{arxiv}
 
-\usepackage{booktabs}
-\usepackage{array}
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
 \usepackage{lmodern}        % https://github.com/rstudio/rticles/issues/343
@@ -31,20 +29,71 @@ School Travel Behaviour in Ireland}
     Department of Mathematics \& Statistics \\
     University of Galway \\
   Galway,Ireland \\
-  \texttt{} \\
+  \texttt{\href{mailto:j.beltranlopez1@universityofgalway.ie}{\nolinkurl{j.beltranlopez1@universityofgalway.ie}}} \\
   }
 
+% Pandoc syntax highlighting
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
 
 % tightlist command for lists without linebreak
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 
+% From pandoc table feature
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
 
 
 \providecommand{\pandocbounded}[1]{#1}
 \usepackage{booktabs}
 \usepackage{array}
-\providecommand{\pandocbounded}[1]{#1}
 \begin{document}
 \maketitle
 
@@ -75,14 +124,6 @@ Here goes an introduction text
 
 \subsection{1.1 Background}\label{background}
 
-\label{sec:headings}
-
-You can use directly LaTeX command or Markdown text.
-
-LaTeX command can be used to reference other section. See Section
-\ref{sec:headings}. However, you can also use \textbf{bookdown}
-extensions mechanism for this.
-
 \subsection{1.2 The Postcode Lottery Argument from the
 article}\label{the-postcode-lottery-argument-from-the-article}
 
@@ -92,26 +133,991 @@ article}\label{the-postcode-lottery-argument-from-the-article}
 
 \subsection{2.1 School Data}\label{school-data}
 
+The school data used in this study were obtained from the Department of
+Education and Youth's \emph{Data on Individual Schools} collection. This
+source provides school-level information for individual schools in
+Ireland, including enrolment figures. For this analysis, the 2024/25
+mainstream school dataset was used because it provides recent
+school-level enrolment information together with school location
+coordinates.
+
+The school dataset was used to construct the main spatial input for the
+school accessibility analysis. Each record represents an individual
+school and includes information such as school location, school latitude
+and longitude, and enrolment. In this study, enrolment was used as a
+proxy for the number of available school places. The geographic
+coordinates were used to convert each school into a spatial point,
+allowing the school data to be linked with Small Area boundaries and
+used in the kriging analysis.
+
+The key variables extracted from the school dataset were:
+
+\begin{itemize}
+\tightlist
+\item
+  school latitude;
+\item
+  school longitude;
+\item
+  enrolment per return.
+\end{itemize}
+
+Schools with missing latitude or longitude were excluded because they
+could not be represented spatially. Schools with missing, zero, or
+invalid enrolment values were also excluded because enrolment was
+required for the school-place accessibility measure. Enrolment was then
+log-transformed before spatial interpolation, as the raw enrolment
+distribution was positively skewed and contained some very large
+schools.
+
+All school coordinates were initially provided as latitude and longitude
+and were converted into spatial point data using the WGS84 coordinate
+reference system. The points were then transformed to the Irish
+Transverse Mercator projection, EPSG:2157, so that spatial distances and
+areas could be calculated in metres. This projected coordinate system
+was used consistently throughout the spatial analysis.
+
+Where multiple school records shared identical coordinates, these points
+were aggregated by taking the mean log-enrolment value. This avoided
+duplicated spatial locations in the kriging model and ensured that each
+coordinate pair contributed only one observed value to the spatial
+interpolation.
+
+The cleaned school point dataset was used as the observed input for the
+ordinary kriging analysis described in Section 3.1. The aim of this step
+was not to count the number of schools within each Small Area directly,
+but to estimate a continuous spatial surface of school-place intensity
+across Ireland. This kriging-derived surface was later aggregated to
+Census Small Areas and normalised by the population aged 3--18 to
+produce the final school place density variable.
+
 \subsection{2.2 Census Data}\label{census-data}
+
+Census data were obtained from the Central Statistics Office (CSO),
+using the Small Area Population Statistics (SAPS) and settlement-level
+tables from Census 2022 and Census 2016. These data were used to
+describe travel behaviour to education and to provide demographic and
+spatial context for the analysis.
+
+The main census outcome of interest was travel mode to education.
+Settlement-level aggregated tables were used to obtain the proportion of
+people travelling to education or childcare by different modes of
+travel. For Census 2022, the relevant table was
+\texttt{SAP2022T11T1TOWN22}, which provides travel-to-education data for
+Towns/Urban Areas. This table combines travel to all forms of education
+and childcare and covers approximately 800 settlements. For comparison
+with the previous census, the 2016 table \texttt{SAP2016T11T1SET}
+provides equivalent settlement-level data for all forms of education
+combined. An additional 2016 table, \texttt{E6013}, provides
+travel-to-education data separated by different stages or periods of
+education, but for a smaller set of settlements.
+
+These tables were accessed through the CSO's PxStat database. They can
+be downloaded manually from the CSO website or programmatically in R
+using the \texttt{csodata} package. Accessing the tables through R
+ensures that the data extraction is reproducible and that the table
+codes used in the analysis are clearly documented.
+
+The settlement-level census data were linked to spatial boundary data
+using CSO Towns/Urban Areas boundaries. For the 2022 analysis, the
+relevant spatial geography is the CSO Towns/Urban Areas 2022 layer.
+These boundaries correspond to the Built Up Areas geography used in
+Census 2022. Built Up Areas were introduced as a new urban geography and
+are based on clusters of urban development. Their boundaries are
+designed to be compatible with Census 2022 Small Areas, which supports
+consistent spatial analysis.
+
+The census travel tables were used to calculate the proportion of people
+travelling to education by active modes. Active travel was defined as
+walking or cycling. The active travel percentage was calculated as:
+
+The active travel percentage was calculated as:
+
+\[
+100 \times \frac{Walking + Cycling}{Total - Not\ stated - Not\ applicable}
+\] This measure was used to describe variation in active travel to
+education across settlements and to provide contextual evidence for the
+later Small Area-level modelling. The settlement-level data were
+particularly useful for understanding broader urban patterns, while the
+Small Area SAPS data were used in the main statistical modelling because
+they provide a finer spatial resolution and can be linked directly to
+the school accessibility measures.
+
+In addition to travel mode, Census 2022 SAPS data were used to derive
+demographic covariates for the statistical model. These included age
+composition, car availability, educational attainment, population aged
+3--18 years, total population, and urban--rural classification. The
+population aged 3--18 years was used to normalise the kriging-derived
+school place measure, producing a school place density variable per
+1,000 children. Urban--rural classification was used to restrict the
+main modelling analysis to urban Small Areas, which were the focus
+population of the study.
+
+Overall, the census data provided three key components for the analysis:
+the active travel outcome, demographic control variables, and spatial
+boundaries for linking statistical data to geographic areas.
 
 \subsection{2.3 Study Area}\label{study-area}
 
 \section{3 Methods}\label{methods}
 
-\subsection{3.1 School Place
-Density:Kriging}\label{school-place-densitykriging}
+\subsection{3.1 School Place Density:
+Kriging}\label{school-place-density-kriging}
+
+This section describes the construction of the school place density
+variable used as the main spatial accessibility exposure in the
+analysis. The aim was to estimate how the availability of school places
+varies spatially across Ireland and to derive a Small Area-level measure
+that could be linked to Census 2022 demographic and travel behaviour
+data.
+
+The input school data consisted of individual mainstream schools for the
+2024/25 academic year, including school coordinates and enrolment
+counts. Since school enrolment was used as a proxy for school place
+availability, schools with missing coordinates or invalid enrolment
+values were removed. Enrolment was log-transformed before interpolation
+because the original enrolment distribution was positively skewed.
+
+All spatial datasets were transformed to the Irish Transverse Mercator
+coordinate reference system, EPSG:2157, so that distances and areas were
+measured consistently in metres. Schools with identical coordinates were
+aggregated by taking the mean log-enrolment value, avoiding duplicated
+point locations in the geostatistical model.
+
+Ordinary kriging was used to predict school place availability at
+unsampled locations. Kriging is appropriate here because it uses the
+spatial autocorrelation structure of the observed school data to
+estimate values at locations where no school is directly observed. The
+spatial dependence in log-enrolment was first assessed using an
+empirical variogram. An exponential variogram model was then fitted and
+used to generate kriging predictions.
+
+Instead of predicting only at the centroid of each Census Small Area,
+each Small Area was divided into a 3 × 3 internal grid. Prediction
+points were created within the valid clipped grid cells using a
+point-on-surface approach. Kriging predictions were obtained at these
+internal points and then averaged to obtain a single predicted value for
+each Small Area. This approach was used to better represent irregularly
+shaped Small Areas and reduce dependence on a single centroid.
+
+The raw kriging output was back-transformed from the log scale using the
+exponential function. This produced a raw spatially interpolated
+estimate of school place intensity. However, because Small Areas differ
+in the number of children living in them, this raw value was normalised
+by the Census 2022 population aged 3--18 years. The final school place
+density variable was expressed as predicted school place intensity per
+1,000 children aged 3--18:
+
+\[
+SchoolDensity_i =
+1000 \times \frac{RawKrigedValue_i}{PopulationAged3to18_i}
+\]
+
+Higher values indicate greater predicted school place availability
+relative to the local school-age population. Lower values indicate lower
+predicted availability relative to potential local demand. This
+normalised variable was used in the later statistical modelling as the
+main school place accessibility exposure.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(tidyverse)}
+\FunctionTok{library}\NormalTok{(sf)}
+\FunctionTok{library}\NormalTok{(gstat)}
+\FunctionTok{library}\NormalTok{(knitr)}
+
+\CommentTok{\# Load objects created by the kriging script}
+\NormalTok{obj }\OtherTok{\textless{}{-}} \FunctionTok{readRDS}\NormalTok{(}\StringTok{"../../outputs/combined\_kriging\_objects.rds"}\NormalTok{)}
+
+\NormalTok{dat\_irl          }\OtherTok{\textless{}{-}}\NormalTok{ obj}\SpecialCharTok{$}\NormalTok{dat\_irl}
+\NormalTok{variogram\_emp    }\OtherTok{\textless{}{-}}\NormalTok{ obj}\SpecialCharTok{$}\NormalTok{variogram}
+\NormalTok{variogram\_model  }\OtherTok{\textless{}{-}}\NormalTok{ obj}\SpecialCharTok{$}\NormalTok{variogram\_model}
+\NormalTok{kriged\_points\_sf }\OtherTok{\textless{}{-}}\NormalTok{ obj}\SpecialCharTok{$}\NormalTok{kriged\_points\_sf}
+\NormalTok{final\_sf         }\OtherTok{\textless{}{-}}\NormalTok{ obj}\SpecialCharTok{$}\NormalTok{final\_sf}
+\NormalTok{final\_df         }\OtherTok{\textless{}{-}}\NormalTok{ obj}\SpecialCharTok{$}\NormalTok{final\_df}
+\NormalTok{final\_df\_urban   }\OtherTok{\textless{}{-}}\NormalTok{ obj}\SpecialCharTok{$}\NormalTok{final\_df\_urban}
+
+\NormalTok{schools\_sf }\OtherTok{\textless{}{-}}\NormalTok{ dat\_irl}\SpecialCharTok{$}\NormalTok{schools\_agg\_sf }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{enrolment\_est =} \FunctionTok{exp}\NormalTok{(log\_enrol))}
+
+\NormalTok{final\_sf\_plot }\OtherTok{\textless{}{-}}\NormalTok{ final\_sf }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(}
+    \SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(urban\_rural),}
+    \FunctionTok{is.finite}\NormalTok{(krig\_value\_raw),}
+    \FunctionTok{is.finite}\NormalTok{(krig\_value\_per\_1000\_3\_18),}
+    \FunctionTok{is.finite}\NormalTok{(krig\_var)}
+\NormalTok{  )}
+\end{Highlighting}
+\end{Shaded}
+
+\subsubsection{Observed school
+locations}\label{observed-school-locations}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{geom\_sf}\NormalTok{(}\AttributeTok{data =}\NormalTok{ final\_sf\_plot, }\AttributeTok{fill =} \StringTok{"grey95"}\NormalTok{, }\AttributeTok{colour =} \ConstantTok{NA}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_sf}\NormalTok{(}
+    \AttributeTok{data =}\NormalTok{ schools\_sf,}
+    \FunctionTok{aes}\NormalTok{(}\AttributeTok{colour =}\NormalTok{ enrolment\_est),}
+    \AttributeTok{size =} \FloatTok{0.8}\NormalTok{,}
+    \AttributeTok{alpha =} \FloatTok{0.8}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{scale\_colour\_viridis\_c}\NormalTok{(}\AttributeTok{name =} \StringTok{"Enrolment"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}
+    \AttributeTok{title =} \StringTok{"Observed school locations"}\NormalTok{,}
+    \AttributeTok{subtitle =} \StringTok{"School points used as input for kriging"}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{theme\_minimal}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio]{Final_Report_files/figure-latex/school-locations-map-1.pdf}}
+\caption{Spatial distribution of mainstream schools used in the kriging
+analysis. Points represent school locations and are coloured by
+estimated enrolment. These observed locations form the input data for
+the interpolation.}
+\end{figure}
+
+\subsubsection{Distribution of enrolment before and after log
+transformation}\label{distribution-of-enrolment-before-and-after-log-transformation}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{schools\_sf }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{st\_drop\_geometry}\NormalTok{() }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ enrolment\_est)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_histogram}\NormalTok{(}\AttributeTok{bins =} \DecValTok{40}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}
+    \AttributeTok{title =} \StringTok{"Distribution of raw school enrolment"}\NormalTok{,}
+    \AttributeTok{x =} \StringTok{"School enrolment"}\NormalTok{,}
+    \AttributeTok{y =} \StringTok{"Number of schools"}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{theme\_minimal}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio]{Final_Report_files/figure-latex/enrolment-histogram-1.pdf}}
+\caption{Distribution of school enrolment before log transformation. The
+raw enrolment variable is positively skewed, motivating the use of
+log-enrolment in the kriging model.}
+\end{figure}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{schools\_sf }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{st\_drop\_geometry}\NormalTok{() }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ log\_enrol)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_histogram}\NormalTok{(}\AttributeTok{bins =} \DecValTok{40}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}
+    \AttributeTok{title =} \StringTok{"Distribution of log school enrolment"}\NormalTok{,}
+    \AttributeTok{x =} \StringTok{"Log school enrolment"}\NormalTok{,}
+    \AttributeTok{y =} \StringTok{"Number of schools"}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{theme\_minimal}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio]{Final_Report_files/figure-latex/log-enrolment-histogram-1.pdf}}
+\caption{Distribution of log-transformed school enrolment. The log
+transformation reduces skewness and limits the influence of very large
+schools in the spatial interpolation.}
+\end{figure}
+
+\subsubsection{Empirical and fitted
+variogram}\label{empirical-and-fitted-variogram}
+
+The empirical variogram was used to assess whether school enrolment
+values were spatially autocorrelated. The fitted exponential variogram
+model was then used to derive the kriging weights.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{plot}\NormalTok{(}
+\NormalTok{  variogram\_emp,}
+\NormalTok{  variogram\_model,}
+  \AttributeTok{main =} \StringTok{"Empirical and fitted variogram for log school enrolment"}
+\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio]{Final_Report_files/figure-latex/variogram-plot-1.pdf}}
+\caption{Empirical variogram and fitted exponential variogram model for
+log school enrolment. The fitted model describes the spatial dependence
+structure used by ordinary kriging.}
+\end{figure}
+
+\subsubsection{Small Area prediction
+points}\label{small-area-prediction-points}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{example\_sa\_id }\OtherTok{\textless{}{-}}\NormalTok{ kriged\_points\_sf }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{st\_drop\_geometry}\NormalTok{() }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{count}\NormalTok{(SA\_PUB2022, }\AttributeTok{name =} \StringTok{"n\_points"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{arrange}\NormalTok{(}\FunctionTok{desc}\NormalTok{(n\_points)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{slice}\NormalTok{(}\DecValTok{1}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{pull}\NormalTok{(SA\_PUB2022)}
+
+\NormalTok{example\_sa }\OtherTok{\textless{}{-}}\NormalTok{ final\_sf }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(SA\_PUB2022 }\SpecialCharTok{==}\NormalTok{ example\_sa\_id)}
+
+\NormalTok{example\_pts }\OtherTok{\textless{}{-}}\NormalTok{ kriged\_points\_sf }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(SA\_PUB2022 }\SpecialCharTok{==}\NormalTok{ example\_sa\_id)}
+
+\FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{geom\_sf}\NormalTok{(}\AttributeTok{data =}\NormalTok{ example\_sa, }\AttributeTok{fill =} \StringTok{"grey95"}\NormalTok{, }\AttributeTok{colour =} \StringTok{"black"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_sf}\NormalTok{(}\AttributeTok{data =}\NormalTok{ example\_pts, }\AttributeTok{size =} \DecValTok{2}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}
+    \AttributeTok{title =} \StringTok{"Example of 3 × 3 Small Area prediction points"}\NormalTok{,}
+    \AttributeTok{subtitle =} \FunctionTok{paste}\NormalTok{(}\StringTok{"Small Area:"}\NormalTok{, example\_sa\_id)}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{theme\_minimal}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio]{Final_Report_files/figure-latex/prediction-points-example-1.pdf}}
+\caption{Example of internal prediction points within one Census Small
+Area. Each Small Area was divided into a 3 × 3 grid, clipped to the
+boundary, and represented using internal point-on-surface prediction
+locations.}
+\end{figure}
+
+\subsubsection{Raw kriged school place
+intensity}\label{raw-kriged-school-place-intensity}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{ggplot}\NormalTok{(final\_sf\_plot) }\SpecialCharTok{+}
+  \FunctionTok{geom\_sf}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{fill =}\NormalTok{ krig\_value\_raw), }\AttributeTok{colour =} \ConstantTok{NA}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{scale\_fill\_viridis\_c}\NormalTok{(}\AttributeTok{name =} \StringTok{"Raw kriged}\SpecialCharTok{\textbackslash{}n}\StringTok{value"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}
+    \AttributeTok{title =} \StringTok{"Raw kriged school place intensity"}\NormalTok{,}
+    \AttributeTok{subtitle =} \StringTok{"Back{-}transformed prediction from the log{-}enrolment kriging model"}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{theme\_minimal}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio]{Final_Report_files/figure-latex/raw-kriging-map-1.pdf}}
+\caption{Raw kriged school place intensity by Small Area. Values
+represent the average back-transformed kriging prediction across the
+internal prediction points in each Small Area.}
+\end{figure}
+
+\subsubsection{Normalised school place density per 1,000 children aged
+3--18}\label{normalised-school-place-density-per-1000-children-aged-318}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{ggplot}\NormalTok{(final\_sf\_plot) }\SpecialCharTok{+}
+  \FunctionTok{geom\_sf}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{fill =}\NormalTok{ krig\_value\_per\_1000\_3\_18), }\AttributeTok{colour =} \ConstantTok{NA}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{scale\_fill\_viridis\_c}\NormalTok{(}\AttributeTok{name =} \StringTok{"School place density}\SpecialCharTok{\textbackslash{}n}\StringTok{per 1,000 children"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}
+    \AttributeTok{title =} \StringTok{"School place density per 1,000 children aged 3–18"}\NormalTok{,}
+    \AttributeTok{subtitle =} \StringTok{"Raw kriged value normalised by local school{-}age population"}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{theme\_minimal}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio]{Final_Report_files/figure-latex/normalised-kriging-map-1.pdf}}
+\caption{Normalised school place density per 1,000 children aged 3--18
+by Small Area. This is the main school accessibility exposure used in
+the modelling stage.}
+\end{figure}
+
+\subsubsection{Kriging prediction
+variance}\label{kriging-prediction-variance}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{ggplot}\NormalTok{(final\_sf\_plot) }\SpecialCharTok{+}
+  \FunctionTok{geom\_sf}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{fill =}\NormalTok{ krig\_var), }\AttributeTok{colour =} \ConstantTok{NA}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{scale\_fill\_viridis\_c}\NormalTok{(}\AttributeTok{name =} \StringTok{"Prediction}\SpecialCharTok{\textbackslash{}n}\StringTok{variance"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}
+    \AttributeTok{title =} \StringTok{"Kriging prediction variance"}\NormalTok{,}
+    \AttributeTok{subtitle =} \StringTok{"Uncertainty associated with the kriging predictions"}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{theme\_minimal}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio]{Final_Report_files/figure-latex/kriging-variance-map-1.pdf}}
+\caption{Kriging prediction variance by Small Area. Higher values
+indicate areas where the kriging prediction is more uncertain.}
+\end{figure}
+
+\subsubsection{Urban and rural
+comparison}\label{urban-and-rural-comparison}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{final\_df }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(}
+    \SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(urban\_rural),}
+    \FunctionTok{is.finite}\NormalTok{(krig\_value\_per\_1000\_3\_18)}
+\NormalTok{  ) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ urban\_rural, }\AttributeTok{y =}\NormalTok{ krig\_value\_per\_1000\_3\_18)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_boxplot}\NormalTok{(}\AttributeTok{outlier.alpha =} \FloatTok{0.3}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}
+    \AttributeTok{title =} \StringTok{"School place density by urban{-}rural classification"}\NormalTok{,}
+    \AttributeTok{x =} \StringTok{"Urban{-}rural classification"}\NormalTok{,}
+    \AttributeTok{y =} \StringTok{"School place density per 1,000 children aged 3–18"}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{theme\_minimal}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio]{Final_Report_files/figure-latex/urban-rural-density-boxplot-1.pdf}}
+\caption{Distribution of normalised school place density by urban-rural
+classification. This plot compares the school accessibility exposure
+across urban and rural Small Areas.}
+\end{figure}
+
+\subsubsection{Relationship with active school travel in urban
+areas}\label{relationship-with-active-school-travel-in-urban-areas}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{final\_df\_urban }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(}
+    \FunctionTok{is.finite}\NormalTok{(perc\_active),}
+    \FunctionTok{is.finite}\NormalTok{(krig\_value\_per\_1000\_3\_18)}
+\NormalTok{  ) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ krig\_value\_per\_1000\_3\_18, }\AttributeTok{y =}\NormalTok{ perc\_active)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_point}\NormalTok{(}\AttributeTok{alpha =} \FloatTok{0.4}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_smooth}\NormalTok{(}\AttributeTok{method =} \StringTok{"loess"}\NormalTok{, }\AttributeTok{se =} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}
+    \AttributeTok{title =} \StringTok{"Active school travel and school place density"}\NormalTok{,}
+    \AttributeTok{subtitle =} \StringTok{"Urban Small Areas only"}\NormalTok{,}
+    \AttributeTok{x =} \StringTok{"School place density per 1,000 children aged 3–18"}\NormalTok{,}
+    \AttributeTok{y =} \StringTok{"Active school travel (\%)"}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{theme\_minimal}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}
+\centering
+\pandocbounded{\includegraphics[keepaspectratio]{Final_Report_files/figure-latex/active-travel-kriging-scatter-1.pdf}}
+\caption{Relationship between active school travel and normalised school
+place density in urban Small Areas. Each point represents one urban
+Small Area.}
+\end{figure}
+
+\subsubsection{Final kriging dataset
+checks}\label{final-kriging-dataset-checks}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{final\_df }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{summarise}\NormalTok{(}
+    \AttributeTok{n =} \FunctionTok{n}\NormalTok{(),}
+    \AttributeTok{missing\_krig =} \FunctionTok{sum}\NormalTok{(}\FunctionTok{is.na}\NormalTok{(krig\_value)),}
+    \AttributeTok{missing\_perc\_active =} \FunctionTok{sum}\NormalTok{(}\FunctionTok{is.na}\NormalTok{(perc\_active)),}
+    \AttributeTok{min\_krig =} \FunctionTok{min}\NormalTok{(krig\_value, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+    \AttributeTok{max\_krig =} \FunctionTok{max}\NormalTok{(krig\_value, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+    \AttributeTok{min\_krig\_norm =} \FunctionTok{min}\NormalTok{(krig\_value\_per\_1000\_3\_18, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+    \AttributeTok{max\_krig\_norm =} \FunctionTok{max}\NormalTok{(krig\_value\_per\_1000\_3\_18, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)}
+\NormalTok{  ) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{kable}\NormalTok{(}
+    \AttributeTok{digits =} \DecValTok{3}\NormalTok{,}
+    \AttributeTok{caption =} \StringTok{"Summary checks for the final kriging{-}derived dataset."}
+\NormalTok{  )}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{longtable}[]{@{}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.0706}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1529}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.2353}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1059}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1059}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1647}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 12\tabcolsep) * \real{0.1647}}@{}}
+\caption{Summary checks for the final kriging-derived
+dataset.}\tabularnewline
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedleft
+n
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+missing\_krig
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+missing\_perc\_active
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+min\_krig
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+max\_krig
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+min\_krig\_norm
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+max\_krig\_norm
+\end{minipage} \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedleft
+n
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+missing\_krig
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+missing\_perc\_active
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+min\_krig
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+max\_krig
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+min\_krig\_norm
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+max\_krig\_norm
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+16671 & 0 & 0 & 305.509 & 238427.6 & 305.509 & 238427.6 \\
+\end{longtable}
+
+The resulting dataset contains the raw kriged school place estimate, the
+normalised school place density per 1,000 children aged 3--18, the
+kriging prediction variance, and the Census-derived variables used in
+the later modelling stage. For interpretation, the normalised variable
+is preferred because it accounts for differences in local school-age
+population size. The raw kriged value is retained only as a reference
+measure of interpolated school place intensity.
 
 \subsection{3.2 Travel Time
 Accessibility:r5r}\label{travel-time-accessibilityr5r}
 
-\subsection{3.3 Demographic Variables:ILR
-Transformation}\label{demographic-variablesilr-transformation}
+\subsection{3.3 Demographic Variables: ILR
+Transformation}\label{demographic-variables-ilr-transformation}
 
-\subsection{3.4 Statistical Model:Bayesian Beta
-Regression}\label{statistical-modelbayesian-beta-regression}
+Several demographic covariates used in this study are expressed as
+percentages. These include age composition, household car availability,
+and educational attainment. Although percentages are easy to interpret
+descriptively, they require special treatment in regression modelling
+because they are compositional variables. A composition is a set of
+parts that together represent a whole. For example, the age-group
+percentages in a Small Area represent the distribution of the local
+population across age categories, while the car-ownership percentages
+represent the distribution of households according to the number of cars
+available.
 
-\subsection{3.5 Normalisation by School:Age
-Population}\label{normalisation-by-schoolage-population}
+The main issue with compositional variables is that their components are
+not statistically independent. If one percentage increases, at least one
+other percentage must decrease because the parts are constrained by a
+fixed total. This means that raw percentages do not behave like ordinary
+unconstrained regression predictors. Including all components directly
+in a regression model can lead to perfect or near-perfect collinearity,
+unstable coefficients, and misleading interpretations.
+
+To address this issue, the demographic percentage variables were
+transformed using the isometric log-ratio transformation. The ILR
+transformation converts a composition with (D) parts into (D - 1)
+real-valued coordinates. These transformed coordinates can then be used
+in standard regression models because they are no longer constrained to
+sum to a fixed total. In this analysis, the ILR-transformed variables
+represent balances between groups of compositional parts rather than
+isolated changes in individual percentages.
+
+Exact zero values cannot be used directly in log-ratio transformations
+because the logarithm of zero is undefined. Therefore, before applying
+the ILR transformation, zero percentages were replaced with a very small
+positive value. This allowed the transformation to be computed while
+minimally altering the original data structure.
+
+In this study, the ILR transformation was applied to demographic
+variables describing the composition of urban Small Areas. The
+transformed ILR coordinates were then used as covariates in the
+statistical model instead of the original percentage variables. This
+approach reduces collinearity between demographic percentages and
+ensures that the regression model respects the relative nature of
+compositional data.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Demographic compositional variables}
+\NormalTok{cols }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}
+  \StringTok{"pct\_0\_12"}\NormalTok{,}
+  \StringTok{"pct\_13\_21"}\NormalTok{,}
+  \StringTok{"pct\_22\_40"}\NormalTok{,}
+  \StringTok{"pct\_41\_70"}\NormalTok{,}
+  \StringTok{"pct\_71plus"}\NormalTok{,}
+  \StringTok{"pct\_0car"}\NormalTok{,}
+  \StringTok{"pct\_1car"}\NormalTok{,}
+  \StringTok{"pct\_2plus"}\NormalTok{,}
+  \StringTok{"pct\_none\_primary"}\NormalTok{,}
+  \StringTok{"pct\_secondary"}\NormalTok{,}
+  \StringTok{"pct\_tertiary"}\NormalTok{,}
+  \StringTok{"pct\_still\_in\_edu"}
+\NormalTok{)}
+
+\CommentTok{\# Check that all required variables exist in the urban dataset}
+\NormalTok{missing\_cols }\OtherTok{\textless{}{-}} \FunctionTok{setdiff}\NormalTok{(cols, }\FunctionTok{names}\NormalTok{(df\_urban))}
+
+\ControlFlowTok{if}\NormalTok{ (}\FunctionTok{length}\NormalTok{(missing\_cols) }\SpecialCharTok{\textgreater{}} \DecValTok{0}\NormalTok{) \{}
+  \FunctionTok{stop}\NormalTok{(}
+    \StringTok{"These ILR variables are missing from the new dataset:}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{,}
+    \FunctionTok{paste}\NormalTok{(missing\_cols, }\AttributeTok{collapse =} \StringTok{", "}\NormalTok{)}
+\NormalTok{  )}
+\NormalTok{\}}
+
+\CommentTok{\# Keep missing values as missing}
+\NormalTok{df\_urban }\OtherTok{\textless{}{-}}\NormalTok{ df\_urban }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}
+    \FunctionTok{across}\NormalTok{(}
+      \FunctionTok{all\_of}\NormalTok{(cols),}
+      \SpecialCharTok{\textasciitilde{}} \FunctionTok{ifelse}\NormalTok{(}\FunctionTok{is.na}\NormalTok{(.x), }\ConstantTok{NA\_real\_}\NormalTok{, .x)}
+\NormalTok{    )}
+\NormalTok{  )}
+
+\CommentTok{\# Convert selected percentage variables into a matrix}
+\NormalTok{matrix\_urban }\OtherTok{\textless{}{-}}\NormalTok{ df\_urban }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{select}\NormalTok{(}\FunctionTok{all\_of}\NormalTok{(cols)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{as.matrix}\NormalTok{()}
+
+\CommentTok{\# Replace exact zeros with a very small positive value}
+\CommentTok{\# This is necessary because log{-}ratio transformations cannot handle zeros}
+\NormalTok{matrix\_urban[matrix\_urban }\SpecialCharTok{==} \DecValTok{0}\NormalTok{] }\OtherTok{\textless{}{-}} \FloatTok{0.001}
+
+\CommentTok{\# Apply ILR transformation}
+\NormalTok{variables\_ilr }\OtherTok{\textless{}{-}} \FunctionTok{ilr}\NormalTok{(}\FunctionTok{acomp}\NormalTok{(matrix\_urban))}
+
+\CommentTok{\# Convert ILR coordinates to a dataframe}
+\NormalTok{variables\_ilr\_df }\OtherTok{\textless{}{-}} \FunctionTok{as.data.frame}\NormalTok{(variables\_ilr)}
+
+\CommentTok{\# Name ILR variables}
+\CommentTok{\# A composition with D parts produces D {-} 1 ILR coordinates}
+\FunctionTok{names}\NormalTok{(variables\_ilr\_df) }\OtherTok{\textless{}{-}} \FunctionTok{paste0}\NormalTok{(}\StringTok{"ilr\_"}\NormalTok{, cols[}\SpecialCharTok{{-}}\FunctionTok{length}\NormalTok{(cols)])}
+
+\CommentTok{\# Create the final urban modelling dataset}
+\CommentTok{\# Original percentage variables are removed and replaced by ILR coordinates}
+\NormalTok{df\_urban\_model }\OtherTok{\textless{}{-}}\NormalTok{ df\_urban }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{select}\NormalTok{(}\SpecialCharTok{{-}}\FunctionTok{all\_of}\NormalTok{(cols)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{bind\_cols}\NormalTok{(variables\_ilr\_df)}
+\end{Highlighting}
+\end{Shaded}
+
+The resulting dataset, \texttt{df\_urban\_model}, contains the original
+outcome and accessibility variables, but replaces the raw demographic
+percentage variables with ILR-transformed coordinates. These ILR
+variables are then used in the Bayesian regression model to adjust for
+differences in demographic structure across urban Small Areas.
+
+\subsection{3.4 Statistical Model: Bayesian Beta
+Regression}\label{statistical-model-bayesian-beta-regression}
+
+The main statistical model was used to estimate the association between
+school place accessibility and active school travel in urban Small
+Areas. The outcome variable was the percentage of pupils travelling to
+school by active modes, defined as walking or cycling. Since this
+outcome is a proportion bounded between 0 and 1 after rescaling, a beta
+regression model was used.
+
+Beta regression is appropriate for this analysis because the response
+variable represents a continuous proportion. Standard linear regression
+would not be ideal because it could generate predicted values below 0 or
+above 1 and assumes constant variance across the outcome range. In
+contrast, the beta distribution is naturally defined on the open
+interval ((0, 1)), making it suitable for modelling proportional
+outcomes.
+
+Before fitting the model, the active travel percentage was converted
+from a percentage to a proportion. Since the beta distribution cannot
+handle exact values of 0 or 1, the transformed response was adjusted
+slightly so that all observations lay strictly between 0 and 1.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{df\_urban\_model }\OtherTok{\textless{}{-}}\NormalTok{ df\_urban\_model }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}
+    \AttributeTok{perc\_active\_prop =}\NormalTok{ perc\_active }\SpecialCharTok{/} \DecValTok{100}\NormalTok{,}
+    \AttributeTok{perc\_active\_beta =}\NormalTok{ (perc\_active\_prop }\SpecialCharTok{*}\NormalTok{ (}\FunctionTok{nrow}\NormalTok{(.) }\SpecialCharTok{{-}} \DecValTok{1}\NormalTok{) }\SpecialCharTok{+} \FloatTok{0.5}\NormalTok{) }\SpecialCharTok{/} \FunctionTok{nrow}\NormalTok{(.)}
+\NormalTok{  )}
+
+\FunctionTok{range}\NormalTok{(df\_urban\_model}\SpecialCharTok{$}\NormalTok{perc\_active\_beta, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+The model was fitted only to urban Small Areas, as these were the main
+population of interest for the analysis. The demographic covariates were
+included using standardised ILR-transformed variables. These ILR
+variables adjust for differences in age structure, car ownership, and
+educational composition while avoiding the collinearity problems
+associated with raw percentages.
+
+The school accessibility variables were included using natural cubic
+spline terms. This allowed the relationship between school accessibility
+and active travel to be non-linear. This is important because the effect
+of school place accessibility may not be constant across its full range.
+For example, increases in accessibility may be strongly associated with
+active travel at lower values, but the association may flatten at higher
+values. Natural cubic splines allow this type of flexible relationship
+while avoiding the assumption of a purely linear effect.
+
+Two natural cubic spline terms were included in the model. The first was
+\texttt{ns(krig\_value\_per\_1000\_3\_18,\ df\ =\ 3)}, which represents
+school place density per 1,000 children aged 3-18. The second was
+\texttt{ns(places\_density\_km2,\ df\ =\ 3)}, which represents predicted
+school places per square kilometre. Both spline terms used three degrees
+of freedom, allowing flexible but controlled non-linear relationships
+with active school travel.
+
+The first term represents school place availability relative to the
+local school-age population. The second term represents spatial density
+of predicted school places per square kilometre. Including both terms
+allows the model to distinguish between accessibility relative to
+population demand and the spatial concentration of school places.
+
+The fitted model can be written as:
+
+\[
+y_i \sim \mathrm{Beta}(\mu_i, \phi)
+\]
+
+\[
+\mathrm{logit}(\mu_i) =
+\alpha +
+\sum_{j=1}^{p} \beta_j Z_{ij}
++
+f_1(K_i)
++
+f_2(D_i)
+\] where (y\_i) is the active travel proportion in urban Small Area (i),
+(\(\mu_i\)) is the expected active travel proportion, and (\(\phi\)) is
+the beta precision parameter. The terms (Z\_\{ij\}) represent the
+standardised ILR demographic covariates. The function (f\_1(K\_i))
+represents the natural spline for school place density per 1,000
+children aged 3--18, and (f\_2(D\_i)) represents the natural spline for
+school places per square kilometre.
+
+Weakly informative priors were used for the model parameters. A normal
+prior with mean 0 and standard deviation 1 was assigned to the
+regression coefficients. This prior regularises the model by
+discouraging unrealistically large effects while still allowing the data
+to influence the posterior estimates. The intercept was assigned a wider
+normal prior with mean 0 and standard deviation 2.5 on the logit scale.
+The beta precision parameter, (\(\phi\)), was assigned an exponential
+prior to ensure that it remains positive.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{priors }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}
+  \FunctionTok{prior}\NormalTok{(}\FunctionTok{normal}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{), }\AttributeTok{class =} \StringTok{"b"}\NormalTok{),}
+  \FunctionTok{prior}\NormalTok{(}\FunctionTok{normal}\NormalTok{(}\DecValTok{0}\NormalTok{, }\FloatTok{2.5}\NormalTok{), }\AttributeTok{class =} \StringTok{"Intercept"}\NormalTok{),}
+  \FunctionTok{prior}\NormalTok{(}\FunctionTok{exponential}\NormalTok{(}\DecValTok{1}\NormalTok{), }\AttributeTok{class =} \StringTok{"phi"}\NormalTok{)}
+\NormalTok{)}
+
+\NormalTok{priors}
+\end{Highlighting}
+\end{Shaded}
+
+The Bayesian beta regression model was fitted using the \texttt{brms}
+package. The model was run with four Markov chains, 4,000 iterations per
+chain, and 1,000 warm-up iterations. The \texttt{adapt\_delta} parameter
+was set to 0.97 and the maximum tree depth was set to 12 to improve
+Hamiltonian Monte Carlo sampling and reduce the risk of divergent
+transitions.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{model\_urban\_krig }\OtherTok{\textless{}{-}} \FunctionTok{brm}\NormalTok{(}
+  \AttributeTok{formula =}\NormalTok{ formula\_beta,}
+  \AttributeTok{data =}\NormalTok{ df\_urban\_model,}
+  \AttributeTok{family =} \FunctionTok{Beta}\NormalTok{(}\AttributeTok{link =} \StringTok{"logit"}\NormalTok{),}
+  \AttributeTok{prior =}\NormalTok{ priors,}
+  \AttributeTok{chains =} \DecValTok{4}\NormalTok{,}
+  \AttributeTok{iter =} \DecValTok{4000}\NormalTok{,}
+  \AttributeTok{warmup =} \DecValTok{1000}\NormalTok{,}
+  \AttributeTok{seed =} \DecValTok{123}\NormalTok{,}
+  \AttributeTok{cores =} \DecValTok{4}\NormalTok{,}
+  \AttributeTok{control =} \FunctionTok{list}\NormalTok{(}
+    \AttributeTok{adapt\_delta =} \FloatTok{0.97}\NormalTok{,}
+    \AttributeTok{max\_treedepth =} \DecValTok{12}
+\NormalTok{  )}
+\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+The logit link was used so that the expected active travel proportion
+remains between 0 and 1. Coefficients from the model are therefore
+estimated on the log-odds scale. For this reason, the main
+interpretation of the model was based on predicted values and marginal
+effect plots on the response scale rather than on the raw coefficient
+values alone.
+
+Model convergence was assessed using standard Bayesian diagnostics.
+These included (\(\hat{R}\)), effective sample size, trace plots,
+divergent transitions, and posterior predictive checks. Values of
+(\(\hat{R}\)) close to 1 indicate that the chains mixed well. Large
+effective sample sizes indicate that the posterior summaries are
+reliable. Posterior predictive checks were used to assess whether the
+model could reproduce the observed distribution of active travel.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary}\NormalTok{(model\_urban\_krig)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{plot}\NormalTok{(model\_urban\_krig)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{pp\_check}\NormalTok{(model\_urban\_krig, }\AttributeTok{ndraws =} \DecValTok{100}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+The estimated relationship between school place accessibility and active
+travel was visualised using conditional effect plots. These plots show
+the expected active travel percentage across the range of each
+accessibility variable while holding the other covariates constant. They
+are more interpretable than the raw spline coefficients because spline
+coefficients do not represent simple one-unit changes.
+
+Bayesian (R\^{}2) was used as an additional summary of model fit. This
+gives an approximate measure of the proportion of variation in active
+travel explained by the model.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{bayes\_R2}\NormalTok{(model\_urban\_krig)}
+\end{Highlighting}
+\end{Shaded}
+
+Finally, the fitted model object was saved for later use in the results
+section, including posterior summaries, model diagnostics, and marginal
+effect plots.
+
+Overall, this model estimates the adjusted association between school
+place accessibility and active school travel in urban Small Areas. The
+model accounts for demographic composition through standardised
+ILR-transformed covariates and allows non-linear associations for the
+two school accessibility variables using natural cubic splines. The
+results are interpreted using posterior credible intervals and predicted
+values on the response scale.
+
+\subsection{3.5 Normalisation by School-Age
+Population}\label{normalisation-by-school-age-population}
+
+After estimating the raw kriging-derived school place intensity, the
+measure was normalised by the local school-age population. This step was
+necessary because the raw kriging value represents predicted school
+place availability, but it does not account for the number of children
+living in each Small Area. Areas with higher predicted school place
+intensity may not necessarily have better accessibility if they also
+contain a large number of school-age children.
+
+To account for local demand, the raw kriged school place value was
+divided by the population aged 3 to 18 years in each Small Area. This
+age range was selected because it approximates the population
+potentially requiring access to primary, post-primary, and related
+school services. The resulting measure was then multiplied by 1,000 to
+make the variable easier to interpret.
+
+The final normalised school place accessibility measure was calculated
+as:
+
+\[
+SchoolDensity_i =
+1000 \times
+\frac{RawKrigedValue_i}{PopulationAged3to18_i}
+\]
+
+where \texttt{RawKrigedValue\_i} is the raw kriging-derived school place
+value for Small Area \texttt{i}, and \texttt{PopulationAged3to18\_i} is
+the number of residents aged 3 to 18 in that Small Area.
+
+Higher values indicate that an area has greater predicted school place
+availability relative to the number of children aged 3--18 living there.
+Lower values indicate that predicted school place availability is lower
+relative to the local school-age population. Therefore, this variable
+can be interpreted as a relative school accessibility measure rather
+than a simple measure of school concentration.
+
+This normalisation was important for the research question because
+active school travel is likely to depend not only on the presence of
+schools, but also on the relationship between school availability and
+the local population of children. Without this adjustment, areas with
+high absolute school place intensity could be overestimated as highly
+accessible, even if they also have a large school-age population.
+
+```\{r normalisation-school-age-population, message=FALSE,
+warning=FALSE\} id=``qfeg4z'' final\_sf \textless- final\_sf
+\%\textgreater\% mutate( area\_km2 = as.numeric(st\_area(geometry)) /
+1e6,
+
+\begin{verbatim}
+# Raw kriging value kept for reference
+krig_value_raw = krig_value,
+
+# Normalise by the population aged 3 to 18
+krig_value_per_child_3_18 = safe_divide(
+  krig_value_raw,
+  pop_3_18
+),
+
+# Express as predicted school place intensity per 1,000 children aged 3 to 18
+krig_value_per_1000_3_18 = 1000 * krig_value_per_child_3_18,
+
+# Use the normalised variable as the main kriging exposure
+krig_value = krig_value_per_1000_3_18,
+
+# Additional spatial density variable
+places_density_km2 = safe_divide(
+  krig_value_raw,
+  area_km2
+)
+\end{verbatim}
+
+)
+
+\begin{verbatim}
+
+The variable `krig_value_raw` was retained as the unnormalised kriging prediction. The variable `krig_value_per_child_3_18` represents the predicted school place intensity per child aged 3–18. The variable `krig_value_per_1000_3_18` expresses the same measure per 1,000 children, making it more interpretable. In the final modelling dataset, `krig_value` was set equal to `krig_value_per_1000_3_18`, meaning that the main school accessibility variable used in the statistical model was the normalised measure.
+
+```{r normalisation-summary, message=FALSE, warning=FALSE} id="hglpml"
+final_df %>%
+  summarise(
+    n = n(),
+    min_population_3_18 = min(pop_3_18, na.rm = TRUE),
+    median_population_3_18 = median(pop_3_18, na.rm = TRUE),
+    max_population_3_18 = max(pop_3_18, na.rm = TRUE),
+    min_school_density = min(krig_value_per_1000_3_18, na.rm = TRUE),
+    median_school_density = median(krig_value_per_1000_3_18, na.rm = TRUE),
+    max_school_density = max(krig_value_per_1000_3_18, na.rm = TRUE)
+  )
+\end{verbatim}
+
+For interpretation, this normalised variable should be understood as a
+relative measure of school place availability. It does not represent the
+exact number of school places physically located within each Small Area.
+Instead, it represents the kriging-derived estimate of school place
+intensity relative to the number of children aged 3--18 living in that
+area.
 
 \section{4 Results}\label{results}
 
@@ -124,8 +1130,8 @@ time}\label{walking-and-cycling-accessibility-travel-time}
 \subsection{4.3 Kriging vs Travel Time
 Comparison}\label{kriging-vs-travel-time-comparison}
 
-\subsection{4.4 Model Results --- Urban Areas,rural if
-possible}\label{model-results-urban-areasrural-if-possible}
+\subsection{4.4 Model Results --- Urban
+Areas}\label{model-results-urban-areas}
 
 \subsection{4.5 Effect of Walking Accessibility on Active
 Travel}\label{effect-of-walking-accessibility-on-active-travel}
