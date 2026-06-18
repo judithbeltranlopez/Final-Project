@@ -448,6 +448,68 @@ Because spline coefficients are not directly interpretable as simple one-unit ch
 
 ## Spatial Distribution of Schools
 
+The 2024/25 school dataset was first explored spatially to understand the distribution of school locations across Ireland. Each school was represented as a point using its latitude and longitude coordinates, and points were mapped against the national boundary. This provides an initial descriptive view of where schools are concentrated before constructing the kriging-based and travel-time accessibility measures.
+
+```{r spatial-distribution-schools, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Spatial distribution of schools across Ireland in the 2024/25 mainstream school dataset. Points represent school locations and are coloured by school level."}
+library(readxl)
+library(dplyr)
+library(sf)
+library(ggplot2)
+library(rnaturalearth)
+
+schools_df <- read_excel(
+  "../data/Data_on_Individual_Schools_Mainstream_2024_25.xlsx",
+  sheet = 2
+) %>%
+  rename(
+    Roll_Number = `Roll Number`,
+    longitude = `School Longitude`,
+    latitude = `School Latitude`,
+    AcademicYear = `Academic Year (Enrolment)`,
+    SchoolName = `Official Name`
+  )
+
+schools_df_clean <- schools_df %>%
+  filter(!is.na(latitude), !is.na(longitude))
+
+schools_sf <- st_as_sf(
+  schools_df_clean,
+  coords = c("longitude", "latitude"),
+  crs = 4326,
+  remove = FALSE
+)
+
+ireland <- ne_countries(scale = "medium", returnclass = "sf") %>%
+  filter(admin == "Ireland")
+
+ggplot() +
+  geom_sf(
+    data = ireland,
+    fill = "grey95",
+    colour = "grey60",
+    linewidth = 0.3
+  ) +
+  geom_sf(
+    data = schools_sf,
+    aes(colour = `School Level`),
+    size = 0.7,
+    alpha = 0.75
+  ) +
+  labs(
+    title = "Spatial distribution of schools in Ireland",
+    subtitle = "Mainstream schools, 2024/25",
+    colour = "School level"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold")
+  )
+```
+
+The map shows that schools are distributed across the country, with visible clustering in and around larger urban areas. This spatial pattern is important for the later analysis because school accessibility is not determined only by the number of schools nationally, but by how school places are distributed relative to where children live. The mapped school locations therefore provide the spatial input for both the kriging-based school-place density measure and the routing-based travel-time accessibility analysis.
+
+
 ## Walking and Cycling Accessibility: travel time
 
 ## Kriging vs Travel Time Comparison
