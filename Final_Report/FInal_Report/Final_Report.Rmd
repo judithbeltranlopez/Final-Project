@@ -378,12 +378,12 @@ Higher values indicate greater predicted school-place availability relative to t
 The unnormalised kriging value was retained as a reference measure of absolute predicted school-place availability. An additional spatial density variable, predicted school places per square kilometre, was also calculated to describe the concentration of school places independently of the local school-age population denominator. The normalised measure per 100 children aged 3–18 was used as the main kriging-based accessibility exposure in the Bayesian beta regression model.
 
 
-## Travel Time Accessibility:r5r
+## Travel-Time Accessibility
 
 ### Rationale and choice of measure
 The kriging-based measure described in the previous section estimates how densely school places are distributed around a location, but it does so in straight-line space and takes no account of the routes a child would actually use. A high krigged density can occur in an area that is in practice difficult to traverse on foot, for example where a river, motorway, or absent crossing separates homes from nearby schools. To capture accessibility as it is experienced along the real network, a second measure was constructed based on travel time rather than spatial proximity. This measure asks how many school places a child could actually reach from their own area within a feasible walking or cycling time, travelling along the existing road and path network.
 
-This is a cumulative opportunity accessibility measure, one of the standard place based approaches to measuring accessibility, in which the number of opportunities reachable from an origin within a fixed travel-time threshold is counted. This type of measure is well suited to school travel, because journeys to school are short and local, and the relevant question is not the average distance to all schools but whether a reasonable number of school places fall within the limited time a child would realistically spend walking or cycling. By counting reachable places within plausible time limits, the measure reflects the practical opportunity for active travel in each area rather than
+This is a cumulative opportunity accessibility measure, one of the standard place based approaches to measuring accessibility, in which the number of opportunities reachable from an origin within a fixed travel-time threshold is counted. This type of measure is well suited to school travel, because journeys to school are short and local, and the relevant question is not the average distance to all schools but whether a reasonable number of school places fall within the limited time a child would realistically spend walking or cycling. By counting reachable places within plausible time limits, the measure reflects the practical opportunity for active travel in each area rather than proximity alone.
 
 ### The underlying method
 
@@ -391,11 +391,11 @@ The measure was produced using network-based routing, in which shortest-path tra
 
 The routing was implemented using the R5 routing engine, accessed in R through the r5r package. R5 efficiently computes travel times over a network derived from OpenStreetMap data and is designed to handle large numbers of origin–destination pairs across walking, cycling, and other modes, which made it suitable for computing accessibility for every Census Small Area in the study.
 
-###Network and input data
+###  Network and input data
 
-The routing network was built from an OpenStreetMap extract for Ireland [OSM EXTRACT SOURCE/DATE]. OpenStreetMap provides the road and path geometry, including footpaths and minor links relevant to walking and cycling, that R5 uses to construct the routable network. The origins for the accessibility calculation were the Census Small Area prediction points, and the destinations were the aggregated school point locations described in Section [school data]. Each destination was weighted by its total enrolment, so that a school location contributed its number of school places rather than counting as a single school. This ensured that accessibility reflected the volume of school places reachable from each area, consistent with the enrolment-weighted treatment of schools used throughout the analysis.
+The routing network was built from an OpenStreetMap extract for Ireland [OSM EXTRACT SOURCE/DATE]. OpenStreetMap provides the road and path geometry, including footpaths and minor links relevant to walking and cycling, that R5 uses to construct the routable network. The origins for the accessibility calculation were the Census Small Area prediction points, and the destinations were the aggregated school point locations described in the School Data section. Each destination was weighted by its total enrolment, so that a school location contributed its number of school places rather than counting as a single school. This ensured that accessibility reflected the volume of school places reachable from each area, consistent with the enrolment-weighted treatment of schools used throughout the analysis.
 
-###Travel-time computation and thresholds
+###  Travel-time computation and thresholds
 Travel times were computed separately for walking and for cycling, using mode-specific speeds of [will add walking speed] for walking and [will add cycling speed] for cycling. Walking accessibility was evaluated at thresholds of 10, 20, and 30 minutes, and cycling accessibility at thresholds of 5, 10, 15, and 20 minutes. These thresholds were chosen to span the range of times a child might plausibly spend travelling actively to school, from short journeys up to a realistic upper limit. For each origin and each threshold, the number of reachable school places was obtained by summing the enrolment-weighted destinations whose network travel time fell within the threshold.
 
 The 30-minute walking measure was carried forward as the primary travel-time exposure in the statistical model. Thirty minutes was treated as the most plausible upper bound for a routine walk to school, long enough to capture the realistic extent of walking journeys while remaining within the time a daily school commute on foot would reasonably take. The shorter walking thresholds and the cycling thresholds were retained for descriptive comparison but were not used as the main model exposure.
@@ -547,7 +547,6 @@ ggplot() +
 ```
 
 The map shows that schools are distributed across the country, with visible clustering in and around larger urban areas. This spatial pattern is important for the later analysis because school accessibility is not determined only by the number of schools nationally, but by how school places are distributed relative to where children live. The mapped school locations therefore provide the spatial input for both the kriging-based school-place density measure and the routing-based travel-time accessibility analysis.
-
 
 ## Walking and Cycling Accessibility: travel time
 
