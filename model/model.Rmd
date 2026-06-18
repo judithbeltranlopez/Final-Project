@@ -347,7 +347,7 @@ ggplot(df_fit_plot, aes(x = observed_pct, y = fitted_pct)) +
     x = "Observed active percentage",
     y = "Fitted active percentage"
   ) +
-  theme_minimal(base_size = 13)
+  theme_minimal(base_size = 13) ## put it on a map!
 ```
 
 ```{r}
