@@ -28,16 +28,16 @@ output: rticles::arxiv_article
 
 Here goes an introduction text
 
-## 1.1 Background
+## Background
 
-## 1.2 The Postcode Lottery Argument from the article
+## The Postcode Lottery Argument from the article
 
 
-## 1.3 Research Objectives
+## Research Objectives
 
-# 2 Data
+# Data
 
-## 2.1 School Data
+## School Data
 
 The school data used in this study were obtained from the Department of Education and Youth’s *Data on Individual Schools* collection. This source provides school-level information for individual schools in Ireland, including enrolment figures. For this analysis, the 2024/25 mainstream school dataset was used because it provides recent school-level enrolment information together with school location coordinates.
 
@@ -58,7 +58,7 @@ Where multiple school records shared identical coordinates, these points were ag
 The cleaned school point dataset was used as the observed input for the ordinary kriging analysis described in Section 3.1. The aim of this step was not to count the number of schools within each Small Area directly, but to estimate a continuous spatial surface of school-place intensity across Ireland. This kriging-derived surface was later aggregated to Census Small Areas and normalised by the population aged 3–18 to produce the final school place density variable.
 
 
-## 2.2 Census Data
+## Census Data
 
 Census data were obtained from the Central Statistics Office (CSO), using the Small Area Population Statistics (SAPS) and settlement-level tables from Census 2022 and Census 2016. These data were used to describe travel behaviour to education and to provide demographic and spatial context for the analysis.
 
@@ -82,11 +82,11 @@ In addition to travel mode, Census 2022 SAPS data were used to derive demographi
 Overall, the census data provided three key components for the analysis: the active travel outcome, demographic control variables, and spatial boundaries for linking statistical data to geographic areas.
 
 
-## 2.3 Study Area
+## Study Area
 
-# 3 Methods
+# Methods
 
-## 3.1 School Place Density: Kriging
+## School Place Density: Kriging
 
 This section describes the construction of the school place density variable used as the main spatial accessibility exposure in the analysis. The aim was to estimate how the availability of school places varies spatially across Ireland and to derive a Small Area-level measure that could be linked to Census 2022 demographic and travel behaviour data.
 
@@ -321,9 +321,9 @@ final_df %>%
 The resulting dataset contains the raw kriged school place estimate, the normalised school place density per 1,000 children aged 3–18, the kriging prediction variance, and the Census-derived variables used in the later modelling stage. For interpretation, the normalised variable is preferred because it accounts for differences in local school-age population size. The raw kriged value is retained only as a reference measure of interpolated school place intensity.
 
 
-## 3.2 Travel Time Accessibility:r5r
+## Travel Time Accessibility:r5r
 
-## 3.3 Demographic Variables: ILR Transformation
+## Demographic Variables: ILR Transformation
 
 Several demographic covariates used in this study are expressed as percentages. These include age composition, household car availability, and educational attainment. Although percentages are easy to interpret descriptively, they require special treatment in regression modelling because they are compositional variables. A composition is a set of parts that together represent a whole. For example, the age-group percentages in a Small Area represent the distribution of the local population across age categories, while the car-ownership percentages represent the distribution of households according to the number of cars available.
 
@@ -401,7 +401,7 @@ df_urban_model <- df_urban %>%
 The resulting dataset, `df_urban_model`, contains the original outcome and accessibility variables, but replaces the raw demographic percentage variables with ILR-transformed coordinates. These ILR variables are then used in the Bayesian regression model to adjust for differences in demographic structure across urban Small Areas.
 
 
-## 3.4 Statistical Model: Bayesian Beta Regression
+## Statistical Model: Bayesian Beta Regression
 
 The main statistical model was used to estimate the association between school place accessibility and active school travel in urban Small Areas. The outcome variable was the percentage of pupils travelling to school by active modes, defined as walking or cycling. Since this outcome is a proportion bounded between 0 and 1 after rescaling, a beta regression model was used.
 
@@ -506,7 +506,7 @@ Finally, the fitted model object was saved for later use in the results section,
 Overall, this model estimates the adjusted association between school place accessibility and active school travel in urban Small Areas. The model accounts for demographic composition through standardised ILR-transformed covariates and allows non-linear associations for the two school accessibility variables using natural cubic splines. The results are interpreted using posterior credible intervals and predicted values on the response scale.
 
 
-## 3.5 Normalisation by School-Age Population
+## Normalisation by School-Age Population
 
 After estimating the raw kriging-derived school place intensity, the measure was normalised by the local school-age population. This step was necessary because the raw kriging value represents predicted school place availability, but it does not account for the number of children living in each Small Area. Areas with higher predicted school place intensity may not necessarily have better accessibility if they also contain a large number of school-age children.
 
@@ -572,26 +572,26 @@ final_df %>%
 For interpretation, this normalised variable should be understood as a relative measure of school place availability. It does not represent the exact number of school places physically located within each Small Area. Instead, it represents the kriging-derived estimate of school place intensity relative to the number of children aged 3–18 living in that area.
 
 
-# 4 Results
+# Results
 
-## 4.1 Spatial Distribution of Schools
+## Spatial Distribution of Schools
 
-## 4.2 Walking and Cycling Accessibility: travel time
+## Walking and Cycling Accessibility: travel time
 
-## 4.3 Kriging vs Travel Time Comparison
+## Kriging vs Travel Time Comparison
 
-## 4.4 Model Results — Urban Areas
+## Model Results — Urban Areas
 
-## 4.5 Effect of Walking Accessibility on Active Travel
+## Effect of Walking Accessibility on Active Travel
 
-# 5 Discussion
+# Discussion
 
-## 5.1 Interpretation of Results
+## Interpretation of Results
 
-## 5.2 Limitations
+## Limitations
 
-## 5.3 Comparison with the article
+## Comparison with the article
 
-# 6 Conclusions
+# Conclusions
 
-# 7 References
+# References
