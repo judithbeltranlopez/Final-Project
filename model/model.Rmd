@@ -425,7 +425,7 @@ ggplot(plot_walk, aes(x = log10_walk_30, y = Estimate_pct)) +
     x        = "School places reachable per 1,000 children",
     y        = "Predicted active travel"
   ) +
-  theme_minimal(base_size = 13)
+  theme_minimal(base_size = 13) ## put it on a map!
 ```
 
 ```{r}
