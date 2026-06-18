@@ -462,6 +462,17 @@ Because spline coefficients are not directly interpretable as simple one-unit ch
 
 ## Limitations
 
+This study has several limitations. First, the outcome data are restricted by the way school travel information is released in official statistics. The Census data provide aggregated travel-to-education counts for Census Small Areas, rather than individual-level journeys between home and school. As a result, the analysis cannot observe the actual school attended by each pupil, the exact route taken, or whether pupils travel to primary or post-primary schools. The model therefore estimates area-level associations between school accessibility and active travel, rather than individual travel behaviour. This means that the results should be interpreted as evidence of spatial association, not as proof that improved accessibility directly causes higher walking or cycling rates.
+
+Second, the analysis combines school accessibility measures with an outcome that is not fully separated by school type in the main Small Area-level data. Primary and post-primary pupils may have different travel distances, school-choice patterns, and active travel opportunities. For example, younger children may be more dependent on nearby primary schools, while secondary students may travel further because post-primary schools are fewer and more specialised. Future work should therefore repeat the analysis separately for primary and post-primary schools where the data allow. However, this may be limited by the availability of travel-mode outcomes disaggregated by school type at fine spatial scales.
+
+Third, the school accessibility measures use enrolment as a proxy for school places. Enrolment provides a consistent measure of the relative size and spatial distribution of schools, but it does not measure spare capacity, catchment areas, admissions policies, or whether a place is realistically available to a child living in a particular area. This limitation is especially relevant where schools are oversubscribed or where school choice is shaped by factors other than distance.
+
+Fourth, the kriging-based accessibility measure captures the spatial distribution of school places, but it does not account for barriers in the transport network, route safety, traffic conditions, or the quality of walking and cycling infrastructure. The routing-based travel-time measure addresses this limitation more directly by using the road and path network, but it still depends on assumptions about walking and cycling speeds and on the completeness and accuracy of OpenStreetMap data.
+
+Finally, the workflow could be repeated using settlement-level data as a complementary analysis. Settlement-level travel tables can describe travel behaviour for whole towns or urban areas, rather than only Census Small Areas. This may provide a broader view of how school provision and active travel relate at the town scale, and could be useful for comparing with previous work on Irish settlements. However, settlement-level data are less spatially detailed than Census Small Area data, so they would be better suited as a complementary robustness or contextual analysis rather than a replacement for the main local-scale model.
+
+
 ## Comparison with the article
 
 # Conclusions
