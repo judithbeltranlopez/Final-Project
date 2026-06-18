@@ -14,7 +14,14 @@ authors:
 abstract: |
   Active travel to school is shaped by the spatial relationship between where children live, where schools are located, and how easily schools can be reached. This study investigates whether school-place accessibility is associated with differences in the proportion of children walking or cycling to school across Ireland. Data from Census 2022, the Department of Education, and OpenStreetMap were combined to construct school accessibility measures for Census Small Areas. Two complementary accessibility measures were developed. First, a kriging-based measure was used to estimate spatial variation in school-place density across Census Small Areas. Second, a routing-based travel-time accessibility measure was used to estimate the number of school places reachable within walking and cycling time thresholds using the road and path network. Bayesian beta regression was then used to model the association between school accessibility and the proportion of children travelling to school by active modes, adjusting for demographic composition using isometric log-ratio transformed covariates. This approach allows the relationship between school accessibility and active school travel to be examined while accounting for spatial variation in local population characteristics. The results provide evidence on whether differences in school-place accessibility contribute to unequal opportunities for active school travel in Ireland.
 keywords:
-  -active travel; school accessibility; school-place density; kriging; travel-time accessibility; Census Small Areas; Bayesian beta regression; Ireland
+  - active travel
+  - school accessibility
+  - school-place density
+  - kriging
+  - travel-time accessibility
+  - Census Small Areas
+  - Bayesian beta regression
+  - Ireland
 bibliography: references.bib
 biblio-style: unsrt
 header-includes:
@@ -39,23 +46,20 @@ Here goes an introduction text
 
 ## School Data
 
-The school data used in this study were obtained from the Department of Education and Youth’s *Data on Individual Schools* collection. This source provides school-level information for individual schools in Ireland, including enrolment figures. For this analysis, the 2024/25 mainstream school dataset was used because it provides recent school-level enrolment information together with school location coordinates.
+School data were obtained from the Department of Education and Youth’s 2024/25 primary and post-primary school enrolment datasets [@departmenteducation_primary_2024_25; @departmenteducation_postprimary_2024_25]. These datasets provide school-level information for individual schools in Ireland, including school location coordinates and enrolment figures. The 2024/25 datasets were used because they provide recent enrolment information together with latitude and longitude coordinates for each school. These coordinates allowed schools to be represented directly as spatial point data without requiring additional geocoding.
 
-The school dataset was used to construct the main spatial input for the school accessibility analysis. Each record represents an individual school and includes information such as school location, school latitude and longitude, and enrolment. In this study, enrolment was used as a proxy for the number of available school places. The geographic coordinates were used to convert each school into a spatial point, allowing the school data to be linked with Small Area boundaries and used in the kriging analysis.
+The school datasets were used to construct the spatial inputs for both school accessibility measures used in this study. Each record represents an individual school and includes its geographic location and enrolment per return. Enrolment was used as a proxy for the number of school places available at each location. Although enrolment does not measure spare capacity directly, it provides a consistent measure of the relative size of schools and the spatial distribution of school places across the country.
 
-The key variables extracted from the school dataset were:
+The key variables extracted from the school datasets were school latitude, school longitude, and enrolment. School records without valid latitude or longitude coordinates were excluded because they could not be represented spatially. Enrolment values were checked before analysis to ensure that the school-place measure was based on valid pupil counts. No schools were removed for missing, zero, or invalid enrolment values after this checking step.
 
-* school latitude;
-* school longitude;
-* enrolment per return.
+All school coordinates were initially provided in latitude and longitude using the WGS84 coordinate reference system. The school points were then transformed to the Irish Transverse Mercator projection, EPSG:2157. This projected coordinate system was used because distances, areas, and spatial operations are measured in metres, making it appropriate for the kriging analysis and for linking school locations to Census Small Areas.
 
-Schools with missing latitude or longitude were excluded because they could not be represented spatially. Schools with missing, zero, or invalid enrolment values were also excluded because enrolment was required for the school-place accessibility measure. Enrolment was then log-transformed before spatial interpolation, as the raw enrolment distribution was positively skewed and contained some very large schools.
+Where multiple school records shared identical coordinates, enrolments were summed before analysis. This ensured that co-located schools, such as junior and senior schools on the same campus, contributed their combined enrolment to the school-place measure. Aggregating duplicate coordinates in this way avoided duplicated spatial locations while preserving the total number of pupils represented at each site.
 
-All school coordinates were initially provided as latitude and longitude and were converted into spatial point data using the WGS84 coordinate reference system. The points were then transformed to the Irish Transverse Mercator projection, EPSG:2157, so that spatial distances and areas could be calculated in metres. This projected coordinate system was used consistently throughout the spatial analysis.
+The cleaned school point dataset was then used in two complementary parts of the accessibility analysis. First, the school locations and enrolment values were used as the observed input for the kriging-based school-place density measure. This produced an area-level estimate of school-place availability across Census Small Areas. Second, the same school locations were used as destination points in the routing-based travel-time accessibility analysis. In that analysis, school enrolment was used to weight destinations so that accessibility was measured as the number of school places reachable within specified walking and cycling travel-time thresholds, rather than simply the number of schools reachable.
 
-Where multiple school records shared identical coordinates, these points were aggregated by taking the mean log-enrolment value. This avoided duplicated spatial locations in the kriging model and ensured that each coordinate pair contributed only one observed value to the spatial interpolation.
+This means that the school dataset contributed both a spatial density measure and a network-based travel-time measure of school accessibility. The kriging-based measure captures the broader spatial distribution of school places, while the routing-based measure captures how many school places can be reached through the actual road and path network within a given travel time. Together, these two measures allow school accessibility to be assessed from both a spatial-proximity perspective and a practical travel-time perspective.
 
-The cleaned school point dataset was used as the observed input for the ordinary kriging analysis described in Section 3.1. The aim of this step was not to count the number of schools within each Small Area directly, but to estimate a continuous spatial surface of school-place intensity across Ireland. This kriging-derived surface was later aggregated to Census Small Areas and normalised by the population aged 3–18 to produce the final school place density variable.
 
 
 ## Census Data
