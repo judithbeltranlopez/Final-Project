@@ -18,24 +18,19 @@ library(posterior)
 ```
 
 ```{r}
-final_df <- readRDS("../outputs/final_df.rds")
+final_df_urban <- readRDS("../outputs/final_df_urban.rds")
 
-model_df <- final_df %>%
-  sf::st_drop_geometry()
+model_df <- final_df_urban
 
-# Joining the walking accessibility
+# Join walking accessibility
 walk_df <- readRDS("D:/Final-Project/DATA/final_df_complete.rds") %>%
   sf::st_drop_geometry() %>%
   mutate(SA_PUB2022 = as.character(SA_PUB2022)) %>%
   select(SA_PUB2022, access_walk_30)
 
-model_df <- model_df %>%
+df_urban <- model_df %>%
   mutate(SA_PUB2022 = as.character(SA_PUB2022)) %>%
   left_join(walk_df, by = "SA_PUB2022")
-
-# Focus on URBAN DATA
-df_urban <- model_df %>%
-  filter(urban_rural %in% "Urban")
 
 # ============================================================
 # 1. ILR transformation for demographic composition variables
@@ -105,13 +100,13 @@ df_urban_model <- df_urban_model %>%
   mutate(
     perc_active_prop = perc_active / 100,
     perc_active_beta = (perc_active_prop * (nrow(.) - 1) + 0.5) / nrow(.),
-    access_walk_per_1000 = 1000 * (access_walk_30 / pop_3_18),
-    log10_walk_30        = log10(access_walk_per_1000 + 1)
+    access_walk_per_100 = 100 * (access_walk_30 / pop_3_18),
+    log10_walk_30       = log10(access_walk_per_100 + 1)
   ) %>%
   filter(
     is.finite(log10_walk_30),
     pop_3_18 > 0,
-    access_walk_per_1000 < 100000)
+    access_walk_per_100 < 100000)
 ```
 
 ```{r}
@@ -256,7 +251,7 @@ mcmc_plot(model_urban_krig, type = "neff")
 # Travel time model
 formula_walk <- as.formula(
   paste(
-    "perc_active_beta ~",
+    "perc_active_beta | weights(prop_weight) ~",
     paste(c(
       z_ilr_vars,
       "ns(log10_walk_30, df = 3)",
@@ -404,7 +399,8 @@ walk_grid <- seq(quantile(df_urban_model$log10_walk_30, 0.01, na.rm = TRUE),
 newdata_walk <- as_tibble(matrix(0, nrow = 100, ncol = length(model_predictors_walk)))
 names(newdata_walk) <- model_predictors_walk
 newdata_walk <- newdata_walk %>%
-  mutate(log10_walk_30 = walk_grid)
+  mutate(log10_walk_30 = walk_grid,
+         prop_weight = 1)
 
 pred_walk <- fitted(model_urban_walk, newdata = newdata_walk,scale = "response", probs = c(0.025, 0.975))
 
@@ -422,7 +418,7 @@ ggplot(plot_walk, aes(x = log10_walk_30, y = Estimate_pct)) +
   ) +
   labs(
     title    = "walking accessibility effect on active travel",
-    x        = "School places reachable per 1,000 children",
+    x        = "School places reachable per 100 children",
     y        = "Predicted active travel"
   ) +
   theme_minimal(base_size = 13) ## put it on a map!
