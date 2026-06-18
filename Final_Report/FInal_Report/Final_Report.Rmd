@@ -61,29 +61,17 @@ The cleaned school point dataset was then used in two complementary parts of the
 This means that the school dataset contributed both a spatial density measure and a network-based travel-time measure of school accessibility. The kriging-based measure captures the broader spatial distribution of school places, while the routing-based measure captures how many school places can be reached through the actual road and path network within a given travel time. Together, these two measures allow school accessibility to be assessed from both a spatial-proximity perspective and a practical travel-time perspective.
 
 
-
 ## Census Data
 
-Census data were obtained from the Central Statistics Office (CSO), using the Small Area Population Statistics (SAPS) and settlement-level tables from Census 2022 and Census 2016. These data were used to describe travel behaviour to education and to provide demographic and spatial context for the analysis.
+Census data were obtained from the Central Statistics Office (CSO). The main census dataset used in the statistical modelling was the Census 2022 Small Area Population Statistics (SAPS) dataset [@cso_saps_2022]. Census Small Areas were used because they provide a fine spatial resolution and can be directly linked to the school accessibility measures constructed from school locations, kriging predictions, and routing-based travel-time calculations.
 
-The main census outcome of interest was travel mode to education. Settlement-level aggregated tables were used to obtain the proportion of people travelling to education or childcare by different modes of travel. For Census 2022, the relevant table was `SAP2022T11T1TOWN22`, which provides travel-to-education data for Towns/Urban Areas. This table combines travel to all forms of education and childcare and covers approximately 800 settlements. For comparison with the previous census, the 2016 table `SAP2016T11T1SET` provides equivalent settlement-level data for all forms of education combined. An additional 2016 table, `E6013`, provides travel-to-education data separated by different stages or periods of education, but for a smaller set of settlements.
+The main outcome variable was the proportion of pupils travelling to school by active modes. Active travel was defined as walking or cycling. The outcome was calculated from Census 2022 travel-to-education variables at Census Small Area level, excluding records with no stated mode of travel or where the question was not applicable. This produced an active-travel percentage for each Census Small Area that could be linked to the school accessibility measures and used as the response variable in the statistical model.
 
-These tables were accessed through the CSO’s PxStat database. They can be downloaded manually from the CSO website or programmatically in R using the `csodata` package. Accessing the tables through R ensures that the data extraction is reproducible and that the table codes used in the analysis are clearly documented.
+Census 2022 SAPS data were also used to derive demographic and population covariates. These included total population, population aged 3–18 years, age composition, household car availability, educational attainment, and urban–rural classification. The population aged 3–18 years was used to normalise the kriging-derived school-place measure, so that school-place availability was expressed relative to the number of school-age children living in each Census Small Area. Urban–rural classification was used to identify the urban Census Small Areas used in the main modelling analysis.
 
-The settlement-level census data were linked to spatial boundary data using CSO Towns/Urban Areas boundaries. For the 2022 analysis, the relevant spatial geography is the CSO Towns/Urban Areas 2022 layer. These boundaries correspond to the Built Up Areas geography used in Census 2022. Built Up Areas were introduced as a new urban geography and are based on clusters of urban development. Their boundaries are designed to be compatible with Census 2022 Small Areas, which supports consistent spatial analysis.
+In addition to the Census Small Area data used in the model, settlement-level CSO tables were used for descriptive and contextual analysis of travel-to-education patterns. For 2022, table SAP2022T11T1TOWN22 provides travel-to-education and childcare data by mode for Towns/Urban Areas [@cso_sap2022t11t1town22]. For comparison with the previous census, table SAP2016T11T1SET provides equivalent 2016 settlement-level data for travel to education [@cso_sap2016t11t1set]. Table E6013 provides 2016 travel-to-education data separated by different periods of education for a smaller set of settlements [@cso_e6013]. These settlement-level tables were not used as the main modelling geography, but they provided broader context for interpreting active-travel patterns across Irish settlements.
 
-The census travel tables were used to calculate the proportion of people travelling to education by active modes. Active travel was defined as walking or cycling. The active travel percentage was calculated as:
-
-The active travel percentage was calculated as:
-
-$$
-100 \times \frac{Walking + Cycling}{Total - Not\ stated - Not\ applicable}
-$$
-This measure was used to describe variation in active travel to education across settlements and to provide contextual evidence for the later Small Area-level modelling. The settlement-level data were particularly useful for understanding broader urban patterns, while the Small Area SAPS data were used in the main statistical modelling because they provide a finer spatial resolution and can be linked directly to the school accessibility measures.
-
-In addition to travel mode, Census 2022 SAPS data were used to derive demographic covariates for the statistical model. These included age composition, car availability, educational attainment, population aged 3–18 years, total population, and urban–rural classification. The population aged 3–18 years was used to normalise the kriging-derived school place measure, producing a school place density variable per 1,000 children. Urban–rural classification was used to restrict the main modelling analysis to urban Small Areas, which were the focus population of the study.
-
-Overall, the census data provided three key components for the analysis: the active travel outcome, demographic control variables, and spatial boundaries for linking statistical data to geographic areas.
+Overall, the census data provided three key components for the analysis: the active-travel outcome, the demographic and population covariates, and the spatial units used to link travel behaviour with school accessibility. The Census Small Area data formed the basis of the main statistical modelling, while the settlement-level tables were used only to support descriptive comparisons and contextual interpretation.
 
 
 ## Study Area
