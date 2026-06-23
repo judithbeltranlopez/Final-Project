@@ -4,7 +4,7 @@ authors:
   - name: Sananthaa Jagadesan Sethamaraikannan
     department: Department of Mathematics & Statistics
     affiliation: University of Galway
-    location: Galway,Ireland.
+    location: Galway,Ireland. 
     email: sananthaajagadesan@gmail.com
   - name: Judith Beltran Lopez
     department: Department of Mathematics & Statistics
