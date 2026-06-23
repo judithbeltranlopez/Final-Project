@@ -14,9 +14,7 @@ library(ggplot2)
 library(readr)
 library(patchwork)
 library(stringr)
-
 ```
-
 
 ```{r }
 r5r_core <- r5r::build_network(data_path = "./DATA")
@@ -38,7 +36,7 @@ origins <- csa_centroids %>%
   st_drop_geometry() %>%
   select(id, lon, lat)
 
-#weighted by number of placess
+#weighted by number of places
 destinations <- schools_sf %>%
   st_transform(4326) %>%
   mutate(
