@@ -1,0 +1,328 @@
+---
+title: "Kriging vs Travel-Time Accessibility"
+author: "Sananthaa"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 8,
+  fig.height = 6
+)
+```
+
+# Load the saved data
+
+```{r}
+library(tidyverse)
+library(sf)
+library(leaflet)
+library(scales)
+
+df_urban_model <- readRDS("D:/Final-Project/model/data2/df_urban_model.rds")
+obj <- readRDS("D:/Final-Project/outputs/combined_kriging_objects.rds")
+
+df_urban_model <- st_drop_geometry(df_urban_model)
+
+final_sf   <- obj$final_sf
+schools_sf <- obj$dat_irl$schools_agg_sf
+```
+
+#comparison table
+
+```{r}
+compare_df <- df_urban_model %>%
+  filter(
+    is.finite(krig_value_per_100_3_18),
+    is.finite(access_walk_per_100),
+    is.finite(pop_3_18)
+  ) %>%
+  mutate(
+    rank_krig     = rank(krig_value_per_100_3_18),
+    rank_walk     = rank(access_walk_per_100),
+    rank_diff     = rank_krig - rank_walk,
+    abs_rank_diff = abs(rank_diff)
+  )
+
+cat("Number of CSAs:", nrow(compare_df), "\n")
+```
+
+#Scatter plot
+
+The walking axis is on a log10 scale and capped at the 99th percentile for readability.
+
+```{r}
+# Scatter plot (both axes log10) with a line of equality
+
+ggplot(compare_df,
+       aes(x = krig_value_per_100_3_18,
+           y = access_walk_per_100,
+           colour = rank_diff)) +
+  geom_point(alpha = 0.55) +
+  geom_abline(slope = 1, intercept = 0,
+              linetype = "dashed", colour = "black") +
+  scale_x_log10(labels = label_number(big.mark = ",")) +
+  scale_y_log10(labels = label_number(big.mark = ",")) +
+  scale_colour_gradient2(
+    name = "Kriging - walk\nrank difference",
+    low = "#2166AC", mid = "grey85", high = "#B2182B", midpoint = 0
+  ) +
+  labs(
+    x = "Kriged school-place density",
+    y = "Walking accessibility in 30 min",
+    title = "Kriging vs travel-time accessibility, urban CSAs"
+  ) +
+  theme_minimal()
+```
+
+#divergent CSAs
+
+```{r}
+divergent <- compare_df %>%
+  arrange(desc(abs_rank_diff)) %>%
+  slice_head(n = 20) %>%
+  select(SA_PUB2022, krig_value_per_100_3_18, access_walk_per_100,
+         rank_krig, rank_walk, rank_diff, pop_3_18)
+
+divergent
+
+cat("fewer than 20 children:",
+    sum(divergent$pop_3_18 < 20), "\n")
+```
+
+#divergent CSAs
+
+```{r}
+divergent_sf <- final_sf %>%
+  filter(SA_PUB2022 %in% divergent$SA_PUB2022) %>%
+  left_join(divergent, by = "SA_PUB2022") %>%
+  st_transform(4326)
+
+schools_ll <- st_transform(schools_sf, 4326)
+schools_in <- schools_ll[divergent_sf, ]
+
+pal <- colorNumeric("RdBu", domain = divergent_sf$rank_diff)
+
+# bounding box so the map opens zoomed to the data, not the whole island
+bb_div <- st_bbox(divergent_sf)
+
+leaflet(divergent_sf) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolygons(
+    fillColor = ~pal(rank_diff),
+    fillOpacity = 0.6, weight = 1, color = "grey30",
+    label = ~paste0("CSA ", SA_PUB2022)
+  ) %>%
+  addCircleMarkers(
+    data = schools_in,
+    radius = 3, color = "black", fillColor = "yellow",
+    fillOpacity = 0.9, stroke = TRUE, weight = 1
+  ) %>%
+  addLegend(pal = pal, values = divergent_sf$rank_diff,
+            title = "Kriging - walk<br>rank difference") %>%
+  fitBounds(bb_div[["xmin"]], bb_div[["ymin"]],
+            bb_div[["xmax"]], bb_div[["ymax"]])
+```
+
+
+#South-west Dublin anomaly check
+
+```{r}
+top_raw <- final_sf %>%
+  st_drop_geometry() %>%
+  filter(is.finite(krig_value_raw)) %>%
+  arrange(desc(krig_value_raw)) %>%
+  slice_head(n = 15) %>%
+  select(SA_PUB2022, krig_value_raw, krig_value_per_100_3_18,
+         pop_3_18, n_samples)
+
+top_raw
+```
+
+#Map of the raw-value hotspots
+.
+
+```{r}
+hotspot_sf <- final_sf %>%
+  filter(SA_PUB2022 %in% top_raw$SA_PUB2022) %>%
+  st_transform(4326)
+
+schools_hot <- schools_ll[hotspot_sf, ]
+
+bb_hot <- st_bbox(hotspot_sf)
+
+leaflet(hotspot_sf) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolygons(fillColor = "red", fillOpacity = 0.4,
+              weight = 1, color = "grey30",
+              label = ~paste0("CSA ", SA_PUB2022)) %>%
+  addCircleMarkers(
+    data = schools_hot,
+    radius = 4, color = "black", fillColor = "yellow",
+    fillOpacity = 0.9, stroke = TRUE, weight = 1
+  ) %>%
+  fitBounds(bb_hot[["xmin"]], bb_hot[["ymin"]],
+            bb_hot[["xmax"]], bb_hot[["ymax"]])
+```
+
+#hotspots are in
+
+```{r}
+counties_sf <- st_read("D:/Final-Project/data/gadm41_IRL_shp/gadm41_IRL_2.shp",
+                       quiet = TRUE) %>%
+  st_make_valid()
+
+hotspot_named <- final_sf %>%
+  filter(SA_PUB2022 %in% top_raw$SA_PUB2022) %>%
+  st_transform(st_crs(counties_sf)) %>%
+  st_join(select(counties_sf, NAME_1, NAME_2)) %>%
+  st_drop_geometry() %>%
+  select(SA_PUB2022, NAME_2, krig_value_raw, pop_3_18, n_samples)
+
+hotspot_named
+```
+
+```{r}
+summary(final_sf$krig_value_raw)
+quantile(final_sf$krig_value_raw, c(0.5, 0.9, 0.95, 0.99), na.rm = TRUE)
+```
+```{r}
+# Marginal distributions of the two measures, and of their difference
+# Neil asked for the distribution of each measure and of the differences.
+
+# 1. Kriging distribution (log10 x-axis, matches the scatter)
+ggplot(compare_df, aes(x = krig_value_per_100_3_18)) +
+  geom_histogram(bins = 40, fill = "#2166AC", colour = "white") +
+  scale_x_log10(labels = label_number(big.mark = ",")) +
+  labs(x = "Kriged school-place density (per 100 children, log scale)",
+       y = "Number of CSAs",
+       title = "Distribution of kriging accessibility") +
+  theme_minimal()
+```
+
+```{r}
+
+# 2. Walking travel-time distribution (log10 x-axis)
+ggplot(compare_df, aes(x = access_walk_per_100)) +
+  geom_histogram(bins = 40, fill = "#B2182B", colour = "white") +
+  scale_x_log10(labels = label_number(big.mark = ",")) +
+  labs(x = "Walking accessibility in 30 min (per 100 children, log scale)",
+       y = "Number of CSAs",
+       title = "Distribution of travel-time accessibility") +
+  theme_minimal()
+```
+
+```{r}
+
+# 3. Distribution of the difference in ranks between the two measures
+ggplot(compare_df, aes(x = rank_diff)) +
+  geom_histogram(bins = 40, fill = "grey40", colour = "white") +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "black") +
+  labs(x = "Rank difference (kriging rank - walking rank)",
+       y = "Number of CSAs",
+       title = "Distribution of the rank difference between measures") +
+  theme_minimal()
+```
+
+
+```{r}
+
+krig_mid <- median(compare_df$krig_value_per_100_3_18, na.rm = TRUE)
+
+severance <- compare_df %>%
+  filter(access_walk_per_100 == 0,
+         krig_value_per_100_3_18 >= krig_mid) %>%
+  arrange(desc(krig_value_per_100_3_18))
+
+cat("CSAs with zero walking access overall:",
+    sum(compare_df$access_walk_per_100 == 0, na.rm = TRUE), "\n")
+cat("Of those, with kriging above the median:", nrow(severance), "\n\n")
+
+# Table - the strongest severance examples (highest kriging, zero walking)
+severance %>%
+  select(SA_PUB2022, krig_value_per_100_3_18, access_walk_per_100,
+         rank_krig, rank_walk, rank_diff, pop_3_18) %>%
+  head(15)
+
+# zero values can't sit on a log axis, so give them a tiny floor just for
+# plotting, and draw a dotted line to show where the real zeros are.
+plot_df <- compare_df %>%
+  mutate(walk_plot = ifelse(access_walk_per_100 == 0, 1, access_walk_per_100))
+
+sev_plot <- severance %>%
+  mutate(walk_plot = 1)
+
+ggplot(plot_df,
+       aes(x = krig_value_per_100_3_18, y = walk_plot)) +
+  geom_point(aes(colour = rank_diff), alpha = 0.45) +
+  geom_point(data = sev_plot,
+             shape = 21, size = 3, stroke = 0.8,
+             colour = "black", fill = NA) +
+  geom_hline(yintercept = 1, linetype = "dotted", colour = "grey40") +
+  scale_x_log10(labels = label_number(big.mark = ",")) +
+  scale_y_log10(labels = label_number(big.mark = ",")) +
+  scale_colour_gradient2(
+    name = "Kriging - walk\nrank difference",
+    low = "#2166AC", mid = "grey85", high = "#B2182B", midpoint = 0
+  ) +
+  labs(
+    x = "Kriged school-place density (per 100 children, log scale)",
+    y = "Walking accessibility in 30 min (per 100 children, log scale)",
+    title = "Schools nearby but none walkable: zero-walk CSAs circled",
+    subtitle = "Dotted line for walking accessibility of zero"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+# Severance map zero-walk CSAs with nearby schools overlaid 
+# whether schools sit just across a barrier (motorway, river, water).
+# We take the strongest zero-walk CSAs
+# school within the buffer on a street basemap, with enrolment
+
+library(leaflet)
+
+# pick a few of the strongest severance CSAs from the table
+focus_ids <- c("237004007", "047132052", "047132051", "048051014")
+
+# the chosen CSA polygons
+focus_sf <- final_sf %>%
+  filter(SA_PUB2022 %in% focus_ids) %>%
+  st_transform(4326)
+
+# buffer ~2 km around them, to catch nearby schools just outside the CSA
+# (buffer in metres, so transform to a projected CRS first)
+focus_buf <- focus_sf %>%
+  st_transform(2157) %>%        # Irish Transverse Mercator (metres)
+  st_buffer(2000) %>%
+  st_transform(4326)
+
+# all schools, then keep only those inside the buffer
+schools_ll   <- st_transform(schools_sf, 4326)
+schools_near <- schools_ll[focus_buf, ]
+
+cat("Schools shown near these CSAs:", nrow(schools_near), "\n")
+
+# OpenStreetMap basemap shows roads and rivers, so the barrier is visible
+leaflet() %>%
+  addProviderTiles(providers$OpenStreetMap) %>%
+  addPolygons(
+    data = focus_sf,
+    fillColor = "red", fillOpacity = 0.4,
+    weight = 2, color = "darkred",
+    label = ~paste0("CSA ", SA_PUB2022)
+  ) %>%
+  addCircleMarkers(
+    data = schools_near,
+    radius = 4, color = "black", fillColor = "yellow",
+    fillOpacity = 0.9, stroke = TRUE, weight = 1,
+    label = ~paste0("School - enrolment: ", enrolment_total)
+  )
+```
