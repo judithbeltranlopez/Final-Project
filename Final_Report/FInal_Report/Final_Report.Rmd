@@ -410,7 +410,7 @@ WalkAccess_i = 100 \times \frac{ReachablePlaces_i}{PopulationAged3to18_i}
 $$
 
 where $ReachablePlaces_i$ is the enrolment-weighted number of school places reachable within 30 minutes of walking from Census Small Area $i$, and $PopulationAged3to18_i$ is the number of residents aged 3–18 in that area. This matches the per-100-children scaling used for the kriging-based measure, so that both accessibility measures are expressed on a comparable demand-adjusted basis.
-
+ 
 The distribution of reachable-place counts was strongly right-skewed, because a small number of dense urban areas could reach many thousands of school places while peripheral areas could reach very few. To prevent these extreme values from dominating the model and to allow the predictor to vary on a multiplicative rather than additive scale, the normalised measure was log-transformed using a base-10 logarithm with an offset of one:
 
 $$

@@ -137,13 +137,13 @@ linear_predictors <- z_ilr_vars
 
 # Spline terms for kriging and density
 spline_terms <- c(
-  "ns(krig_value_per_1000_3_18, df = 3)",
+  "ns(krig_value_per_100_3_18, df = 3)",
   "ns(places_density_km2, df = 3)"
 )
 
 formula_beta <- as.formula(
   paste(
-    "perc_active_beta ~",
+    "perc_active_beta | weights(prop_weight) ~",
     paste(c(linear_predictors, spline_terms), collapse = " + ")
   )
 )
@@ -254,7 +254,7 @@ formula_walk <- as.formula(
     "perc_active_beta | weights(prop_weight) ~",
     paste(c(
       z_ilr_vars,
-      "ns(log10_walk_30, df = 3)",
+      "ns(log10_walk_30, df = 3)", 
       "ns(places_density_km2, df = 3)"
     ), collapse = " + ")
   ) 
@@ -339,12 +339,12 @@ mcmc_plot(model_urban_walk, type = "neff")
 
 model_predictors <- all.vars(formula_beta)[-1]
 
-krig_mean <- mean(df_urban_model$krig_value_per_1000_3_18, na.rm = TRUE)
-krig_sd <- sd(df_urban_model$krig_value_per_1000_3_18, na.rm = TRUE)
+krig_mean <- mean(df_urban_model$krig_value_per_100_3_18, na.rm = TRUE)
+krig_sd <- sd(df_urban_model$krig_value_per_100_3_18, na.rm = TRUE)
 
 krig_grid <- seq(
-  quantile(df_urban_model$krig_value_per_1000_3_18, 0.01, na.rm = TRUE),
-  quantile(df_urban_model$krig_value_per_1000_3_18, 0.99, na.rm = TRUE),
+  quantile(df_urban_model$krig_value_per_100_3_18, 0.01, na.rm = TRUE),
+  quantile(df_urban_model$krig_value_per_100_3_18, 0.99, na.rm = TRUE),
   length.out = 100
 )
 
@@ -356,8 +356,9 @@ names(newdata_krig) <- model_predictors
 
 newdata_krig <- newdata_krig %>%
   mutate(
-    krig_value_per_1000_3_18 = krig_grid,
-    krig_value_original = krig_value_per_1000_3_18 * krig_sd + krig_mean
+    krig_value_per_100_3_18 = krig_grid,
+    krig_value_original = krig_value_per_100_3_18,
+    prop_weight = 1
   )
 
 pred_krig <- fitted(
