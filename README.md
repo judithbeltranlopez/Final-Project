@@ -100,7 +100,7 @@ and rebuilt by re-running the travel-time script.
 CSAs are excluded where total population > 900 (typically non-residential, e.g.
 hospitals, hotels) and where the population aged 3–18 is < 5 (to avoid unstable
 normalised values). The number and proportion of CSAs excluded are reported in
-the report.# Distance, Mobility, and Mode Choice: A Spatial Analysis of School Travel Behaviour in Ireland
+the report.
 
 ## Overview
 
