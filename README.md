@@ -5,7 +5,6 @@ MSc Health Data Science final project, University of Galway.
 **Authors:** Sananthaa Jagadesan Sethamaraikannan, Judith Beltrán López
 **Supervisor:** Neil O'Leary
 
----
 
 ## Overview
 
@@ -23,7 +22,6 @@ two different measures of accessibility to school places:
 Both measures are normalised per 100 children aged 3–18, and their effect on the
 proportion of active travel is modelled using Bayesian beta regression.
 
----
 
 ## How to run (pipeline order)
 
@@ -65,7 +63,6 @@ stage reads.
   (areas where schools are close in straight-line distance but not reachable on
   foot because of barriers such as motorways, rivers and water).
 
----
 
 ## Report and outputs
 
@@ -75,7 +72,6 @@ stage reads.
 - **Slides:** `slides/`(quarto of the presentation)
 - **Saved models and datasets:** `model/models/`, `outputs/`
 
----
 
 ## Data
 
@@ -91,7 +87,6 @@ the analysis; if missing, the `.pbf` can be downloaded from
 [Geofabrik](https://download.geofabrik.de/europe/ireland-and-northern-ireland.html)
 and rebuilt by re-running the travel-time script.
 
----
 
 ## Key methods
 
