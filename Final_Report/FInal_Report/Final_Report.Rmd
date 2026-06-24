@@ -12,7 +12,7 @@ authors:
     location: Galway,Ireland
     email: j.beltranlopez1@universityofgalway.ie
 abstract: |
-  Active travel to school is shaped by the spatial relationship between where children live, where schools are located, and how easily schools can be reached. This study investigates whether school-place accessibility is associated with differences in the proportion of children walking or cycling to school across Ireland. Data from Census 2022, the Department of Education, and OpenStreetMap were combined to construct school accessibility measures for Census Small Areas. Two complementary accessibility measures were developed. First, a kriging-based measure was used to estimate spatial variation in school-place density across Census Small Areas. Second, a routing-based travel-time accessibility measure was used to estimate the number of school places reachable within walking and cycling time thresholds using the road and path network. Bayesian beta regression was then used to model the association between school accessibility and the proportion of children travelling to school by active modes, adjusting for demographic composition using isometric log-ratio transformed covariates. This approach allows the relationship between school accessibility and active school travel to be examined while accounting for spatial variation in local population characteristics. The results provide evidence on whether differences in school-place accessibility contribute to unequal opportunities for active school travel in Ireland.
+  Active travel to school is shaped by the spatial relationship between where children live, where schools are located, and how easily schools can be reached. This study investigates whether school-place accessibility is associated with differences in the proportion of children walking or cycling to school across Ireland. Data from Census 2022, the Department of Education, and OpenStreetMap were combined to construct school accessibility measures for Census Small Areas. Two complementary accessibility measures were developed: a kriging-based measure of school-place density, based on straight-line distance, and a routing-based walking accessibility measure, based on the number of school places reachable on foot within 30 minutes along the road and path network. Bayesian beta regression was used to model the association between school accessibility and the proportion of children travelling to school by active modes, adjusting for demographic composition using isometric log-ratio transformed covariates. The two measures agreed on average but diverged in many individual areas. These divergences consistently reflected severance, where physical barriers such as motorways, rivers, and water cut an area off from schools that are close in straight-line terms but not reachable on foot. The walking accessibility measure was much more strongly associated with active travel than the straight-line kriging measure, suggesting that whether schools can actually be reached on foot matters more for active school travel than how close they are in straight-line distance.
 keywords:
   - active travel
   - school accessibility
@@ -37,7 +37,7 @@ Active travel to school, particularly walking and cycling, is an important part 
 
 In Ireland, access to nearby schools is not evenly distributed across space. Some areas have a high concentration of school places within short walking or cycling distances, while others have fewer nearby options. This has been described as a form of “postcode lottery”, where opportunities for active school travel may depend partly on where children live. However, this argument requires spatial evidence: it is necessary to measure school accessibility at a local scale and examine whether areas with better access to school places also have higher active travel rates.
 
-This study investigates the relationship between school-place accessibility and active school travel across Ireland. The analysis combines Census 2022 Small Area data, Department of Education school enrolment and location data, and OpenStreetMap network data. Two complementary measures of school accessibility are developed. First, a kriging-based measure estimates the spatial distribution of school-place density across Census Small Areas. Second, a routing-based travel-time measure estimates how many school places can be reached within walking and cycling time thresholds using the road and path network.
+This study investigates the relationship between school-place accessibility and active school travel across Ireland. The analysis combines Census 2022 Small Area data, Department of Education school enrolment and location data, and OpenStreetMap network data. Two complementary measures of school accessibility are developed. First, a kriging-based measure estimates the spatial distribution of school-place density across Census Small Areas using straight-line distance. Second, a routing-based travel-time measure estimates how many school places can be reached on foot within a travel-time threshold using the road and path network.
 
 The main outcome is the proportion of pupils travelling to school by active modes, defined as walking or cycling. Bayesian beta regression is used to model the association between school accessibility and active travel in urban Census Small Areas, while adjusting for demographic composition, car availability, and educational attainment. This allows the analysis to examine whether differences in school accessibility are associated with differences in active school travel after accounting for local population characteristics.
 
@@ -72,7 +72,7 @@ Working with official statistics presents important methodological challenges fo
 
 The first objective is to map and analyse the spatial distribution of schools across Ireland, using school location and enrolment data to describe where school places are concentrated.
 
-The second objective is to develop local measures of school accessibility. This includes a kriging-based measure of school-place density and a routing-based travel-time measure of the number of school places reachable by walking or cycling.
+The second objective is to develop local measures of school accessibility. This includes a kriging-based measure of school-place density and a routing-based travel-time measure of the number of school places reachable on foot.
 
 The third objective is to describe school travel behaviour using Census 2022 data, focusing on the prevalence of active travel modes, defined as walking and cycling, across Census Small Areas.
 
@@ -112,6 +112,40 @@ In addition to the Census Small Area data used in the model, settlement-level CS
 
 Overall, the census data provided three key components for the analysis: the active-travel outcome, the demographic and population covariates, and the spatial units used to link travel behaviour with school accessibility. The Census Small Area data formed the basis of the main statistical modelling, while the settlement-level tables were used only to support descriptive comparisons and contextual interpretation.
 
+```{r study-area-csa, echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=7, out.width="100%", fig.cap="The study area and spatial unit of analysis, shaded by Census Small Area (CSA) size. Left: all CSAs across Ireland. Right: a zoomed view of CSAs in part of Galway. CSAs are designed to hold broadly similar populations, so they are geographically small in densely populated urban areas (darker) and large in sparsely populated rural areas (lighter). This urban-rural contrast in CSA size reflects the population-density differences that make active school travel more feasible in urban areas, and is one reason the main model was restricted to urban CSAs. CSAs are the smallest geography at which Census data are released, which makes them well suited to studying short, local school journeys."}
+
+library(tidyverse)
+library(sf)
+library(scales)
+library(patchwork)
+
+# add area (km2) for colouring, capped so a few huge rural CSAs don't dominate
+csa_area <- final_sf %>%
+  mutate(area_km2 = as.numeric(st_area(.)) / 1e6,
+         area_cap = pmin(area_km2, quantile(area_km2, 0.95, na.rm = TRUE)))
+
+galway_area <- csa_area[galway_boundary, ]
+
+p_nat <- ggplot() +
+  geom_sf(data = csa_area, aes(fill = area_cap), colour = NA) +
+  geom_sf(data = ireland_boundary, fill = NA, colour = "grey30", linewidth = 0.3) +
+  scale_fill_viridis_c(name = "CSA area (km2)", trans = "sqrt",
+                       labels = label_number(big.mark = ",")) +
+  labs(title = "Fig. 1. CSAs across Ireland") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold"), legend.position = "right")
+
+p_zoom <- ggplot() +
+  geom_sf(data = galway_area, aes(fill = area_cap), colour = "grey40", linewidth = 0.1) +
+  geom_sf(data = galway_boundary, fill = NA, colour = "black", linewidth = 0.4) +
+  scale_fill_viridis_c(name = "CSA area (km2)", trans = "sqrt",
+                       labels = label_number(big.mark = ",")) +
+  labs(title = " CSAs in Galway") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold"), legend.position = "right")
+
+p_nat + p_zoom + plot_layout(guides = "collect")
+```
 
 ## Study Area
 
@@ -248,7 +282,7 @@ ggplot() +
     labels = label_number(big.mark = ",")
   ) +
   labs(
-    title = "School locations used for kriging",
+    title = "Fig. 2. School locations used for kriging",
     subtitle = "Aggregated school locations weighted by total enrolment"
   ) +
   theme_minimal() +
@@ -262,7 +296,7 @@ ggplot() +
 plot(
   variogram_emp,
   variogram_model,
-  main = "Empirical and fitted variogram for log-enrolment"
+  main = "Fig. 3. Empirical and fitted variogram for log-enrolment"
 )
 ```
 
@@ -284,7 +318,7 @@ ggplot() +
     labels = label_number(big.mark = ",")
   ) +
   labs(
-    title = "Normalised kriged school-place density",
+    title = "Fig. 4. Normalised kriged school-place density",
     subtitle = "Per 100 children aged 3–18; colour capped at 99th percentile"
   ) +
   theme_minimal() +
@@ -306,7 +340,7 @@ final_df %>%
     )
   ) +
   labs(
-    title = "Distribution of kriged school-place density",
+    title = "Fig. 5. Distribution of kriged school-place density",
     subtitle = "Per 100 children aged 3–18; x-axis capped at 99th percentile",
     x = "School-place density per 100 children aged 3–18",
     y = "Number of Census Small Areas"
@@ -345,7 +379,7 @@ ggplot() +
     labels = label_number(big.mark = ",")
   ) +
   labs(
-    title = "Galway kriging values with school locations",
+    title = "Fig. 6. Galway kriging values with school locations",
     subtitle = "Normalised kriging per 100 children aged 3–18"
   ) +
   theme_minimal() +
@@ -485,6 +519,40 @@ Because spline coefficients are not directly interpretable as simple one-unit ch
 
 # Results
 
+```{r active-travel-urban-rural, echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=5, out.width="100%", fig.cap="Distribution of the active-travel percentage across Census Small Areas, split by urban and rural classification. Violins show the full distribution; the white point is the median and the black point is the mean. Values are shown below the 99th percentile."}
+
+library(tidyverse)
+
+# active-travel outcome + urban/rural flag
+at_src <- readRDS("D:/Final-Project/DATA/final_df_complete.rds") %>%
+  sf::st_drop_geometry() %>%
+  filter(is.finite(perc_active), !is.na(urban_rural)) %>%
+  filter(perc_active <= quantile(perc_active, 0.99, na.rm = TRUE)) %>%
+  select(urban_rural, perc_active)
+
+# summary points
+at_summary <- at_src %>%
+  group_by(urban_rural) %>%
+  summarise(mean_at = mean(perc_active, na.rm = TRUE),
+            median_at = median(perc_active, na.rm = TRUE), .groups = "drop")
+
+ggplot(at_src, aes(x = urban_rural, y = perc_active)) +
+  geom_violin(fill = "grey85", colour = "grey50", trim = TRUE) +
+  geom_point(data = at_summary, aes(y = median_at),
+             colour = "white", size = 3, shape = 21, fill = "white", stroke = 0.8) +
+  geom_point(data = at_summary, aes(y = mean_at),
+             colour = "black", size = 2.5) +
+  coord_flip() +
+  labs(
+    title = "Fig. 7. Active travel to school, urban vs rural",
+    subtitle = "White point = median, black point = mean; below 99th percentile",
+    x = NULL,
+    y = "Active travel (% of pupils walking or cycling)"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold"))
+```
+
 ## Spatial Distribution of Schools
 
 The 2024/25 school dataset was first explored spatially to understand the distribution of school locations across Ireland. Each school was represented as a point using its latitude and longitude coordinates, and points were mapped against the national boundary. This provides an initial descriptive view of where schools are concentrated before constructing the kriging-based and travel-time accessibility measures.
@@ -535,7 +603,7 @@ ggplot() +
     alpha = 0.75
   ) +
   labs(
-    title = "Spatial distribution of schools in Ireland",
+    title = "Fig. 8. Spatial distribution of schools in Ireland",
     subtitle = "Mainstream schools, 2024/25",
     colour = "School level"
   ) +
@@ -560,7 +628,7 @@ library(sf)
 library(scales)
 library(patchwork)
 
-walk_src <- readRDS("../DATA/final_df_complete.rds") %>%
+walk_src <- readRDS("D:/Final-Project/DATA/final_df_complete.rds") %>%
   sf::st_drop_geometry() %>%
   mutate(
     SA_PUB2022 = as.character(SA_PUB2022),
@@ -586,7 +654,7 @@ p_map <- ggplot() +
   geom_sf(data = ireland_boundary, fill = NA, colour = "grey40", linewidth = 0.15) +
   scale_fill_viridis_c(name = "Walking access\nper 100 children",
                        trans = "sqrt", labels = label_number(big.mark = ",")) +
-  labs(title = "Walking accessibility to school places") +
+  labs(title = "Fig. 9. Walking accessibility to school places") +
   theme_minimal() + theme(plot.title = element_text(face = "bold"))
 
 p_hist <- walk_map_sf %>%
@@ -618,7 +686,7 @@ krig_vals <- final_df %>%
   select(SA_PUB2022, krig_value_per_100_3_18) %>%
   mutate(SA_PUB2022 = as.character(SA_PUB2022))
 
-walk_vals <- readRDS("../DATA/final_df_complete.rds") %>%
+walk_vals <- readRDS("D:/Final-Project/DATA/final_df_complete.rds") %>%
   sf::st_drop_geometry() %>%
   mutate(
     SA_PUB2022 = as.character(SA_PUB2022),
@@ -646,7 +714,7 @@ ggplot(compare_df,
                          low = "#2166AC", mid = "grey85", high = "#B2182B", midpoint = 0) +
   labs(x = "Kriged school-place density (per 100 children, log scale)",
        y = "Walking accessibility (per 100 children, log scale)",
-       title = "Kriging vs walking accessibility, urban Census Small Areas") +
+       title = "Fig. 10. Kriging vs walking accessibility, urban Census Small Areas") +
   theme_minimal() + theme(plot.title = element_text(face = "bold"))
 ```
 
@@ -657,7 +725,7 @@ ggplot(compare_df, aes(x = rank_diff)) +
   geom_vline(xintercept = 0, linetype = "dashed", colour = "black") +
   labs(x = "Rank difference (kriging rank - walking rank)",
        y = "Number of Census Small Areas",
-       title = "Distribution of the rank difference between the two measures") +
+       title = "Fig. 11. Distribution of the rank difference between the two measures") +
   theme_minimal() + theme(plot.title = element_text(face = "bold"))
 ```
 
@@ -692,7 +760,7 @@ ggplot(plot_df, aes(x = krig_value_per_100_3_18, y = walk_plot)) +
                          low = "#2166AC", mid = "grey85", high = "#B2182B", midpoint = 0) +
   labs(x = "Kriged school-place density (per 100 children, log scale)",
        y = "Walking accessibility (per 100 children, log scale)",
-       title = "Schools nearby but none walkable: zero-walk areas circled") +
+       title = "Fig. 12. Schools nearby but none walkable: zero-walk areas circled") +
   theme_minimal() + theme(plot.title = element_text(face = "bold"))
 ```
 
@@ -709,7 +777,7 @@ severance %>%
     `Kriging rank` = round(rank_krig, 0),
     `Walking rank` = round(rank_walk, 0)
   ) %>%
-  kable(caption = "The fifteen urban Census Small Areas with the highest kriged school-place density but zero walking accessibility.")
+  kable(caption = "Table. 1. The fifteen urban Census Small Areas with the highest kriged school-place density but zero walking accessibility.")
 
 ```
 
@@ -719,10 +787,15 @@ library(png)
 library(grid)
 library(patchwork)
 
-img1 <- rasterGrob(readPNG("../images/JB1.png"), interpolate = TRUE)
-img2 <- rasterGrob(readPNG("../images/JB3.png"), interpolate = TRUE)
+img1 <- rasterGrob(readPNG("D:/Final-Project/images/JB1.png"), interpolate = TRUE)
+img2 <- rasterGrob(readPNG("D:/Final-Project/images/JB3.png"), interpolate = TRUE)
 
-wrap_elements(img1) + wrap_elements(img2)
+(wrap_elements(img1) + wrap_elements(img2)) +
+  plot_annotation(
+    title = "Fig. 13. Severance in action: Jacob's Island, Cork",
+    theme = theme(plot.title = element_text(face = "bold", size = 14, hjust = 0.5))
+  )
+
 
 ```
 A clear example is the CSA on Jacob's Island in Cork, shown in Figure X. The wider view on the left shows that schools (in yellow) are present throughout the Cork area, including several within a short straight-line distance of Jacob's Island. The zoomed view on the right shows the CSA itself, which sits on a spit of land surrounded by the Mahon estuary and cut off from the city by the South Ring Road. Although schools are close as the crow flies, the only routes available involve long detours by road, so no school can be reached on foot within 30 minutes and the walking accessibility for this area is zero. The kriging measure, which is based on straight-line distance, does not capture this barrier and therefore records the area as having reasonable school-place availability.
@@ -730,6 +803,54 @@ The same broad pattern can be seen at the national scale in the walking accessib
 
 
 Bivariate map: CSAs coloured by both measures (if possible if there is time)
+
+{r bivariate-map, echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=9, out.width="100%", fig.cap="Bivariate map of the two accessibility measures across urban Census Small Areas. Each area is shaded by both kriged school-place density and walking accessibility at once. Areas high in both appear dark; areas where the two measures disagree (for example high kriged density but low walking accessibility, indicating severance) appear in the off-diagonal colours."}
+
+```{r}
+library(tidyverse)
+library(sf)
+library(biscale)
+library(cowplot)
+
+# both measures joined to geometry (all CSAs, population filter only)
+walk_src <- readRDS("D:/Final-Project/DATA/final_df_complete.rds") %>%
+  sf::st_drop_geometry() %>%
+  mutate(SA_PUB2022 = as.character(SA_PUB2022),
+         access_walk_per_100 = 100 * (access_walk_30 / pop_3_18)) %>%
+  filter(pop_3_18 >= 5) %>%
+  select(SA_PUB2022, access_walk_per_100)
+
+bi_sf <- final_sf %>%
+  mutate(SA_PUB2022 = as.character(SA_PUB2022)) %>%
+  inner_join(walk_src, by = "SA_PUB2022") %>%
+  filter(is.finite(krig_value_per_100_3_18), is.finite(access_walk_per_100)) %>%
+  st_make_valid()
+
+# classify into a 3x3 bivariate grid (quantile breaks)
+bi_sf <- bi_class(bi_sf,
+                  x = krig_value_per_100_3_18,
+                  y = access_walk_per_100,
+                  style = "quantile", dim = 3)
+
+map <- ggplot() +
+  geom_sf(data = ireland_boundary, fill = "grey97", colour = "grey70", linewidth = 0.2) +
+  geom_sf(data = bi_sf, aes(fill = bi_class), colour = NA, show.legend = FALSE) +
+  bi_scale_fill(pal = "GrPink", dim = 3) +
+  labs(title = "Fig. 14. Two accessibility measures at once",
+       subtitle = "Kriged density and walking accessibility, Census Small Areas") +
+  bi_theme() +
+  theme(plot.title = element_text(face = "bold", size = 13),
+        plot.subtitle = element_text(size = 10))
+
+legend <- bi_legend(pal = "GrPink", dim = 3,
+                    xlab = "Higher kriged density",
+                    ylab = "Higher walking access",
+                    size = 8)
+
+ggdraw() +
+  draw_plot(map, 0, 0, 1, 1) +
+  draw_plot(legend, 0.02, 0.02, 0.22, 0.22)
+```
 
 ### Model Results — Urban Areas                            
 
@@ -743,11 +864,11 @@ library(brms)
 library(tidyverse)
 library(patchwork)
 
-model_urban_krig <- readRDS("../model/models/model_urban_krig_splines.rds")
-model_urban_walk <- readRDS("../model/models/model_urban_walk.rds")
+model_urban_krig <- readRDS("D:/Final-Project/model/models/model_urban_krig_splines.rds")
+model_urban_walk <- readRDS("D:/Final-Project/model/models/model_urban_walk.rds")
 
 p_krig <- mcmc_plot(model_urban_krig, type = "intervals", prob = 0.95) +
-  labs(title = "Kriging model") +
+  labs(title = "Fig. 15. Kriging model") +
   theme_minimal() + theme(plot.title = element_text(face = "bold"))
 
 p_walk <- mcmc_plot(model_urban_walk, type = "intervals", prob = 0.95) +
@@ -762,7 +883,7 @@ p_krig + p_walk
 library(patchwork)
 
 p_pp_krig <- pp_check(model_urban_krig, ndraws = 100) +
-  labs(title = "Kriging model") +
+  labs(title = "Fig. 16. Kriging model") +
   theme_minimal() + theme(plot.title = element_text(face = "bold"))
 
 p_pp_walk <- pp_check(model_urban_walk, ndraws = 100) +
@@ -778,8 +899,8 @@ library(posterior)
 library(tidyverse)
 library(knitr)
 
-model_urban_krig <- readRDS("../model/models/model_urban_krig_splines.rds")
-model_urban_walk <- readRDS("../model/models/model_urban_walk.rds")
+model_urban_krig <- readRDS("D:/Final-Project/model/models/model_urban_krig_splines.rds")
+model_urban_walk <- readRDS("D:/Final-Project/model/models/model_urban_walk.rds")
 
 conv_row <- function(model, name) {
   ds <- summarise_draws(model)
@@ -797,7 +918,7 @@ bind_rows(
   conv_row(model_urban_krig, "Kriging"),
   conv_row(model_urban_walk, "Walking")
 ) %>%
-  kable(caption = "Convergence diagnostics for both models. Rhat values near 1, large effective sample sizes (ESS), and no divergent transitions indicate the chains converged well.")
+  kable(caption = "Table. 2. Convergence diagnostics for both models. Rhat values near 1, large effective sample sizes (ESS), and no divergent transitions indicate the chains converged well.")
 ```
 
 ```{r summary-statistics-table, echo=FALSE, message=FALSE, warning=FALSE}
@@ -805,7 +926,7 @@ library(tidyverse)
 library(knitr)
 
 # load the modelling dataset
-df_model <- readRDS("../model/data2/df_urban_model.rds")
+df_model <- readRDS("D:/Final-Project/model/data2/df_urban_model.rds")
 
 # pick the key model variables (response + accessibility + a few covariates)
 summary_vars <- df_model %>%
@@ -829,7 +950,7 @@ summary_vars %>%
     Max    = round(max(value, na.rm = TRUE), 1),
     .groups = "drop"
   ) %>%
-  kable(caption = "Summary statistics for the main variables used in the urban modelling dataset. Values are shown for the Census Small Areas included in the model after filtering.")
+  kable(caption = "Table. 3. Summary statistics for the main variables used in the urban modelling dataset. Values are shown for the Census Small Areas included in the model after filtering.")
 ```
 
 ### Effect of Accessibility on Active Travel
@@ -843,9 +964,9 @@ Comparing the two curves on the vertical axis, the walking measure is associated
 
 library(brms); library(tidyverse); library(patchwork); library(splines)
 
-model_urban_krig <- readRDS("../model/models/model_urban_krig_splines.rds")
-model_urban_walk <- readRDS("../model/models/model_urban_walk.rds")
-df_urban_model   <- readRDS("../model/data2/df_urban_model.rds")
+model_urban_krig <- readRDS("D:/Final-Project/model/models/model_urban_krig_splines.rds")
+model_urban_walk <- readRDS("D:/Final-Project/model/models/model_urban_walk.rds")
+df_urban_model   <- readRDS("D:/Final-Project/model/data2/df_urban_model.rds")
 
 # helper: hold all numeric predictors at their mean, vary one column
 make_newdata <- function(df, vary_col, grid) {
@@ -875,7 +996,7 @@ plot_walk <- bind_cols(ndw, as_tibble(pw)) %>%
 # kriging on its own (linear) scale
 p_krig <- ggplot(plot_krig, aes(krig_value_per_100_3_18, Estimate)) +
   geom_ribbon(aes(ymin=Q2.5, ymax=Q97.5), alpha=.2) + geom_line(linewidth=1) +
-  labs(title="Kriging accessibility effect",
+  labs(title="Fig. 17. Kriging accessibility effect",
        x="Kriged school-place density (per 100 children)",
        y="Predicted active travel (%)") +
   theme_minimal() + theme(plot.title=element_text(face="bold"))
