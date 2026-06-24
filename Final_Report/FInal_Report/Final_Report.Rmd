@@ -112,6 +112,11 @@ In addition to the Census Small Area data used in the model, settlement-level CS
 
 Overall, the census data provided three key components for the analysis: the active-travel outcome, the demographic and population covariates, and the spatial units used to link travel behaviour with school accessibility. The Census Small Area data formed the basis of the main statistical modelling, while the settlement-level tables were used only to support descriptive comparisons and contextual interpretation.
 
+<<<<<<< HEAD
+=======
+{r study-area-csa, echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=7, out.width="100%", fig.cap="The study area and spatial unit of analysis. Left: all Census Small Areas (CSAs) across Ireland. Right: a zoomed view of CSAs in part of Galway, showing the fine spatial scale of the units. CSAs are the smallest geography at which Census data are released, which makes them well suited to studying short, local school journeys."}
+
+>>>>>>> b09995e1a70ceda0a9dec91d49570b9165f148a0
 ```{r study-area-csa, echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=7, out.width="100%", fig.cap="The study area and spatial unit of analysis, shaded by Census Small Area (CSA) size. Left: all CSAs across Ireland. Right: a zoomed view of CSAs in part of Galway. CSAs are designed to hold broadly similar populations, so they are geographically small in densely populated urban areas (darker) and large in sparsely populated rural areas (lighter). This urban-rural contrast in CSA size reflects the population-density differences that make active school travel more feasible in urban areas, and is one reason the main model was restricted to urban CSAs. CSAs are the smallest geography at which Census data are released, which makes them well suited to studying short, local school journeys."}
 
 library(tidyverse)
