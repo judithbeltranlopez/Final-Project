@@ -85,40 +85,46 @@ Together, these objectives aim to assess whether spatial differences in school-p
 
 ## School Data
 
-School data were obtained from the Department of Education and Youth’s 2024/25 primary and post-primary school enrolment datasets [@departmenteducation_primary_2024_25; @departmenteducation_postprimary_2024_25]. These datasets provide school-level information for individual schools in Ireland, including school location coordinates and enrolment figures. The 2024/25 datasets were used because they provide recent enrolment information together with latitude and longitude coordinates for each school. These coordinates allowed schools to be represented directly as spatial point data without requiring additional geocoding.
+School data were obtained from the Department of Education and Youth's 2024/25 school datasets. Primary school records were taken from the mainstream schools enrolment dataset [@departmenteducation_primary_2024_25], and post-primary school records from the corresponding post-primary dataset, which included Eircodes [@departmenteducation_postprimary_2024_25]. Both datasets provide school-level information, including location coordinates and enrolment figures. The 2024/25 datasets were used because they provide recent enrolment information together with latitude and longitude coordinates for each school, which allowed schools to be represented directly as spatial point data without requiring additional geocoding.
 
-The school datasets were used to construct the spatial inputs for both school accessibility measures used in this study. Each record represents an individual school and includes its geographic location and enrolment per return. Enrolment was used as a proxy for the number of school places available at each location. Although enrolment does not measure spare capacity directly, it provides a consistent measure of the relative size of schools and the spatial distribution of school places across the country.
+The two datasets were combined into a single set of school points, giving 3,081 primary schools and 723 post-primary schools, a combined total of 3,804 schools used in the analysis. Each record represents an individual school and includes its location and enrolment. Enrolment was used as a proxy for the number of school places available at each location. Although enrolment does not measure spare capacity directly, it provides a consistent measure of the relative size of schools and the spatial distribution of school places across the country.
 
-The key variables extracted from the school datasets were school latitude, school longitude, and enrolment. School records without valid latitude or longitude coordinates were excluded because they could not be represented spatially. Enrolment values were checked before analysis to ensure that the school-place measure was based on valid pupil counts. No schools were removed for missing, zero, or invalid enrolment values after this checking step.
-
+The key variables extracted were school latitude, school longitude, and enrolment. Records without valid coordinates, or without a valid positive enrolment value, were removed because they could not be used in the spatial analysis. After this step, enrolment values ranged from one to just over one thousand pupils per school, with no zero values remaining.
 All school coordinates were initially provided in latitude and longitude using the WGS84 coordinate reference system. The school points were then transformed to the Irish Transverse Mercator projection, EPSG:2157. This projected coordinate system was used because distances, areas, and spatial operations are measured in metres, making it appropriate for the kriging analysis and for linking school locations to Census Small Areas.
 
-Where multiple school records shared identical coordinates, enrolments were summed before analysis. This ensured that co-located schools, such as junior and senior schools on the same campus, contributed their combined enrolment to the school-place measure. Aggregating duplicate coordinates in this way avoided duplicated spatial locations while preserving the total number of pupils represented at each site.
+Where multiple school records shared identical coordinates, their enrolments were summed before analysis. This affected co-located schools, such as junior and senior schools on the same campus, which then contributed their combined enrolment to the school-place measure. Summing duplicate coordinates in this way avoided duplicated spatial locations while preserving the total number of pupils represented at each site.
 
-The cleaned school point dataset was then used in two complementary parts of the accessibility analysis. First, the school locations and enrolment values were used as the observed input for the kriging-based school-place density measure. This produced an area-level estimate of school-place availability across Census Small Areas. Second, the same school locations were used as destination points in the routing-based travel-time accessibility analysis. In that analysis, school enrolment was used to weight destinations so that accessibility was measured as the number of school places reachable within specified walking and cycling travel-time thresholds, rather than simply the number of schools reachable.
-
-This means that the school dataset contributed both a spatial density measure and a network-based travel-time measure of school accessibility. The kriging-based measure captures the broader spatial distribution of school places, while the routing-based measure captures how many school places can be reached through the actual road and path network within a given travel time. Together, these two measures allow school accessibility to be assessed from both a spatial-proximity perspective and a practical travel-time perspective.
-
+The cleaned school point dataset was then used in two complementary parts of the accessibility analysis. First, the school locations and enrolment values were used as the observed input for the kriging-based school-place density measure, producing an area-level estimate of school-place availability across Census Small Areas. Second, the same school locations were used as destination points in the routing-based travel-time accessibility analysis. In that analysis, school enrolment was used to weight destinations, so that accessibility was measured as the number of school places reachable on foot within a travel-time threshold, rather than simply the number of schools reachable.
+The school dataset therefore contributed both a spatial density measure and a network-based travel-time measure of school accessibility. The kriging-based measure captures the broader spatial distribution of school places, while the routing-based measure captures how many school places can be reached through the actual road and path network within a given walking time. Together, these two measures allow school accessibility to be assessed from both a spatial-proximity perspective and a practical travel-time perspective.
 
 ## Census Data
 
-Census data were obtained from the Central Statistics Office (CSO). The main census dataset used in the statistical modelling was the Census 2022 Small Area Population Statistics (SAPS) dataset [@cso_saps_2022]. Census Small Areas were used because they provide a fine spatial resolution and can be directly linked to the school accessibility measures constructed from school locations, kriging predictions, and routing-based travel-time calculations.
+Census data were obtained from the Central Statistics Office (CSO) Census 2022 Small Area Population Statistics (SAPS) dataset [@cso_saps_2022]. The analysis was carried out at the Census Small Area (CSA) level. The CSA is the smallest geography at which Census data are released, which makes it well suited to studying school travel, because walking and cycling to school are short, local journeys, and a fine spatial unit captures local variation that larger settlement-level geographies would average out. CSAs can also be directly linked to the school accessibility measures constructed from school locations, kriging predictions, and routing-based travel-time calculations.
 
-The main outcome variable was the proportion of pupils travelling to school by active modes. Active travel was defined as walking or cycling. The outcome was calculated from Census 2022 travel-to-education variables at Census Small Area level, excluding records with no stated mode of travel or where the question was not applicable. This produced an active-travel percentage for each Census Small Area that could be linked to the school accessibility measures and used as the response variable in the statistical model.
+The main outcome variable was the proportion of people travelling to education by active modes, defined as walking or cycling. It was calculated from the Census 2022 travel-to-education variables, which record how those attending school or college usually travel, excluding records with no stated mode of travel or for whom the question did not apply. This produced an active-travel percentage for each CSA, which was linked to the school accessibility measures and used as the response variable in the statistical model.
 
-Census 2022 SAPS data were also used to derive demographic and population covariates. These included total population, population aged 3–18 years, age composition, household car availability, educational attainment, and urban–rural classification. The population aged 3–18 years was used to normalise the kriging-derived school-place measure, so that school-place availability was expressed relative to the number of school-age children living in each Census Small Area. Urban–rural classification was used to identify the urban Census Small Areas used in the main modelling analysis.
+The SAPS dataset was also used to derive demographic and population covariates, including total population, population aged 3–18 years, age composition, household car availability, educational attainment, and urban–rural classification. The population aged 3–18 years was used to express both accessibility measures relative to the number of school-age children living in each CSA. The CSO classifies each CSA into one of six urban–rural categories. For this analysis, cities, satellite urban towns, and independent urban towns were treated as urban, while the three rural categories (rural areas with high, moderate, and low urban influence) were treated as rural. The main statistical model was restricted to urban CSAs, where population density, school density, and street connectivity make walking and cycling to school more feasible.
 
-In addition to the Census Small Area data used in the model, settlement-level CSO tables were used for descriptive and contextual analysis of travel-to-education patterns. For 2022, table SAP2022T11T1TOWN22 provides travel-to-education and childcare data by mode for Towns/Urban Areas [@cso_sap2022t11t1town22]. For comparison with the previous census, table SAP2016T11T1SET provides equivalent 2016 settlement-level data for travel to education [@cso_sap2016t11t1set]. Table E6013 provides 2016 travel-to-education data separated by different periods of education for a smaller set of settlements [@cso_e6013]. These settlement-level tables were not used as the main modelling geography, but they provided broader context for interpreting active-travel patterns across Irish settlements.
+## Study Area
+The study area was the Republic of Ireland. The analysis was conducted at the Census Small Area level, using Census Small Area boundaries from the 2022 national statistical boundary dataset [@tailte_smallareas_2022]. Census Small Areas were selected as the main spatial unit because they provide a fine geographical scale for linking population characteristics, school accessibility, and travel behaviour. This scale is more appropriate for studying school travel than larger settlement-level geographies, because walking and cycling to school are highly local behaviours.
 
-Overall, the census data provided three key components for the analysis: the active-travel outcome, the demographic and population covariates, and the spatial units used to link travel behaviour with school accessibility. The Census Small Area data formed the basis of the main statistical modelling, while the settlement-level tables were used only to support descriptive comparisons and contextual interpretation.
-
-
-```{r study-area-csa, echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=7, out.width="100%", fig.cap="The study area and spatial unit of analysis, shaded by Census Small Area (CSA) size. Left: all CSAs across Ireland. Right: a zoomed view of CSAs in part of Galway. CSAs are designed to hold broadly similar populations, so they are geographically small in densely populated urban areas (darker) and large in sparsely populated rural areas (lighter). This urban-rural contrast in CSA size reflects the population-density differences that make active school travel more feasible in urban areas, and is one reason the main model was restricted to urban CSAs. CSAs are the smallest geography at which Census data are released, which makes them well suited to studying short, local school journeys."}
+```{r study-area-csa, echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=7, out.width="100%", fig.cap="Census Small Areas (CSAs) across Ireland (left) and zoomed in on Galway (right), shaded by area. CSAs are small in densely populated urban areas and large in sparsely populated rural areas."}
 
 library(tidyverse)
 library(sf)
 library(scales)
 library(patchwork)
+
+obj <- readRDS("../../outputs/combined_kriging_objects.rds")
+final_sf <- obj$final_sf
+ireland_boundary <- obj$dat_irl$region_sf %>% st_transform(st_crs(final_sf)) %>% st_make_valid()
+
+counties_sf <- st_read("../../data/gadm41_IRL_shp/gadm41_IRL_2.shp", quiet = TRUE) %>%
+  st_transform(st_crs(final_sf)) %>% st_make_valid()
+galway_boundary <- counties_sf %>%
+  filter(stringr::str_detect(NAME_1, regex("Galway", ignore_case = TRUE)) |
+         stringr::str_detect(NAME_2, regex("Galway", ignore_case = TRUE))) %>%
+  st_union() %>% st_as_sf() %>% mutate(county = "Galway")
 
 # add area (km2) for colouring, capped so a few huge rural CSAs don't dominate
 csa_area <- final_sf %>%
@@ -132,7 +138,7 @@ p_nat <- ggplot() +
   geom_sf(data = ireland_boundary, fill = NA, colour = "grey30", linewidth = 0.3) +
   scale_fill_viridis_c(name = "CSA area (km2)", trans = "sqrt",
                        labels = label_number(big.mark = ",")) +
-  labs(title = "Fig. 1. CSAs across Ireland") +
+  labs(title = "CSAs across Ireland") +
   theme_minimal() +
   theme(plot.title = element_text(face = "bold"), legend.position = "right")
 
@@ -148,9 +154,7 @@ p_zoom <- ggplot() +
 p_nat + p_zoom + plot_layout(guides = "collect")
 ```
 
-## Study Area
-
-The study area was the Republic of Ireland. The analysis was conducted at the Census Small Area level, using Census Small Area boundaries from the 2022 national statistical boundary dataset [@tailte_smallareas_2022]. Census Small Areas were selected as the main spatial unit because they provide a fine geographical scale for linking population characteristics, school accessibility, and travel behaviour. This scale is more appropriate for studying school travel than larger settlement-level geographies, because walking and cycling to school are highly local behaviours.
+Figure 1 shows the study area and the Census Small Area (CSA) unit. The left panel shows all CSAs across Ireland, and the right panel zooms in on Galway so the individual areas can be seen. Each CSA is shaded by its size in square kilometres. CSAs are designed to contain roughly the same number of people, so their geographic size depends on how densely the area is populated: in cities and towns, where many people live close together, CSAs are small (darker colours), while in the countryside, where people are more spread out, CSAs are much larger (lighter colours). This is why cities appear as small dark clusters and rural areas as large pale shapes.
 
 Each Census Small Area was treated as a neighbourhood-level unit of analysis. Census 2022 demographic and travel variables were linked to these boundaries, while school accessibility measures were derived from school locations and then summarised at the Census Small Area level. For the kriging-based measure, school-place density predictions were aggregated to Census Small Areas. For the routing-based travel-time measure, Census Small Areas were used as the origins from which reachable school places were calculated using the road and path network.
 
@@ -158,11 +162,16 @@ All spatial layers were transformed to the Irish Transverse Mercator coordinate 
 
 The main statistical modelling was restricted to urban Census Small Areas. This restriction was used because the research question focuses on active school travel, and walking and cycling are more feasible in urban settings where population density, school density, and street-network connectivity are generally higher. Rural Census Small Areas were retained for descriptive spatial comparisons, but they were not included in the main Bayesian beta regression model.
 
+## Constructing the Final Dataset
+
+The final dataset was assembled by bringing the school, census, and network data together at the Census Small Area (CSA) level. School locations from the primary and post-primary files were combined into a single set of enrolment-weighted points, which served as the input for both accessibility measures. For the kriging measure, school-place density was predicted at a 3 × 3 grid of points within each CSA and averaged to give one value per area. For the walking measure, the same CSA grid points were used as origins, and travel times to the school locations were computed over the OpenStreetMap network, counting the enrolment-weighted school places reachable on foot within 30 minutes and averaging to one value per CSA. Both measures were then normalised by the CSA population aged 3–18 to express accessibility per 100 children.
+
+These accessibility measures were joined to the Census active-travel outcome and the demographic covariates, all at CSA level, to form a single dataset. Some CSAs were then removed so that the modelling sample was reliable: areas with missing required values, areas with a total population above 900, and areas with fewer than five children aged 3–18 were excluded, the last two to avoid unstable estimates from unusually large areas or very small denominators. The main statistical model was then restricted to the urban CSAs within this cleaned dataset, giving the final modelling sample used in the analysis.
 # Methods
 
 ## School Place Density: Kriging
 
-A kriging-based school-place density measure was developed to estimate spatial variation in school-place availability across Census Small Areas. Kriging is a geostatistical interpolation method that uses the spatial correlation structure of observed point data to predict values at unsampled locations. In this study, the observed point data were school locations, and the variable interpolated was school enrolment, used as a proxy for school-place availability. The general kriging workflow, including empirical variograms, fitted variogram models, and spatial prediction, follows standard geostatistical practice and is described in Moraga’s spatial statistics text [@moraga2024spatial; @moraga2024kriging]. The kriging implementation was carried out using the `gstat` package in R [@pebesma2004gstat].
+A kriging-based school-place density measure was developed to estimate spatial variation in school-place availability across Census Small Areas. Kriging is a geostatistical interpolation method that uses the spatial correlation structure of observed point data to predict values at unsampled locations. In this study, the observed point data were school locations, and the variable interpolated was school enrolment, used as a proxy for school-place availability. The general kriging workflow, including empirical variograms, fitted variogram models, and spatial prediction, follows standard geostatistical practice and is described in Moraga’s spatial statistics text [@moraga2023spatial; @moraga2023kriging].. The kriging implementation was carried out using the `gstat` package in R [@pebesma2004gstat].
 
 School records were first converted to spatial points using their latitude and longitude coordinates and were then transformed to the Irish Transverse Mercator coordinate reference system, EPSG:2157. This ensured that distance-based calculations were carried out in metres. Records without valid coordinates or valid enrolment values were removed because they could not contribute to the spatial interpolation. Where multiple schools shared exactly the same coordinates, their enrolments were summed before analysis. This ensured that co-located schools, such as junior and senior schools on the same campus, contributed their combined enrolment to the school-place measure. After aggregation, the total enrolment at each unique school location was log-transformed before fitting the kriging model.
 
@@ -283,7 +292,7 @@ ggplot() +
     labels = label_number(big.mark = ",")
   ) +
   labs(
-    title = "Fig. 2. School locations used for kriging",
+    title = "School locations used for kriging",
     subtitle = "Aggregated school locations weighted by total enrolment"
   ) +
   theme_minimal() +
@@ -297,7 +306,7 @@ ggplot() +
 plot(
   variogram_emp,
   variogram_model,
-  main = "Fig. 3. Empirical and fitted variogram for log-enrolment"
+  main = "Empirical and fitted variogram for log-enrolment"
 )
 ```
 
@@ -319,7 +328,7 @@ ggplot() +
     labels = label_number(big.mark = ",")
   ) +
   labs(
-    title = "Fig. 4. Normalised kriged school-place density",
+    title = "Normalised kriged school-place density",
     subtitle = "Per 100 children aged 3–18; colour capped at 99th percentile"
   ) +
   theme_minimal() +
@@ -341,7 +350,7 @@ final_df %>%
     )
   ) +
   labs(
-    title = "Fig. 5. Distribution of kriged school-place density",
+    title = "Distribution of kriged school-place density",
     subtitle = "Per 100 children aged 3–18; x-axis capped at 99th percentile",
     x = "School-place density per 100 children aged 3–18",
     y = "Number of Census Small Areas"
@@ -380,7 +389,7 @@ ggplot() +
     labels = label_number(big.mark = ",")
   ) +
   labs(
-    title = "Fig. 6. Galway kriging values with school locations",
+    title = "Galway kriging values with school locations",
     subtitle = "Normalised kriging per 100 children aged 3–18"
   ) +
   theme_minimal() +
@@ -416,24 +425,26 @@ The unnormalised kriging value was retained as a reference measure of absolute p
 ## Travel-Time Accessibility
 
 ### Rationale and choice of measure
-The kriging-based measure described in the previous section estimates how densely school places are distributed around a location, but it does so in straight-line space and takes no account of the routes a child would actually use. A high krigged density can occur in an area that is in practice difficult to traverse on foot, for example where a river, motorway, or absent crossing separates homes from nearby schools. To capture accessibility as it is experienced along the real network, a second measure was constructed based on travel time rather than spatial proximity. This measure asks how many school places a child could actually reach from their own area within a feasible walking or cycling time, travelling along the existing road and path network.
 
-This is a cumulative opportunity accessibility measure, one of the standard place based approaches to measuring accessibility, in which the number of opportunities reachable from an origin within a fixed travel-time threshold is counted. This type of measure is well suited to school travel, because journeys to school are short and local, and the relevant question is not the average distance to all schools but whether a reasonable number of school places fall within the limited time a child would realistically spend walking or cycling. By counting reachable places within plausible time limits, the measure reflects the practical opportunity for active travel in each area rather than proximity alone.
+The kriging-based measure described in the previous section estimates how densely school places are distributed around a location, but it does so in straight-line (Euclidean) space and takes no account of the routes a child would actually use. A high kriged density can occur in an area that is in practice difficult to traverse on foot, for example where a river, motorway, or absent crossing separates homes from nearby schools. To capture accessibility as it is experienced along the real network, a second measure was constructed based on travel time rather than straight-line proximity. This measure asks how many school places a child could actually reach from their own area within a feasible walking time, travelling along the existing road and path network.
+
+This is a cumulative-opportunity accessibility measure, one of the standard place-based approaches to measuring accessibility, in which the number of opportunities reachable from an origin within a fixed travel-time threshold is counted [@geurs2004accessibility]. This type of measure is well suited to school travel, because journeys to school are short and local, and the relevant question is not the average distance to all schools but whether a reasonable number of school places fall within the limited time a child would realistically spend walking. By counting reachable places within a plausible time limit, the measure reflects the practical opportunity for active travel in each area rather than straight-line proximity alone.
 
 ### The underlying method
 
-The measure was produced using network-based routing, in which shortest-path travel times are computed across a multimodal street network from each origin to a set of candidate destinations. For every origin–destination pair, the routing algorithm finds the quickest path through the network for a given travel mode, and destinations whose travel time falls within a chosen threshold are then treated as reachable. This is the method underlying the accessibility calculations, it is distinct from any particular software used to carry it out.
+The measure was produced using network-based routing, in which shortest-path travel times are computed across a street network from each origin to a set of candidate destinations. For every origin–destination pair, the routing algorithm finds the quickest path through the network for the chosen travel mode, and destinations whose travel time falls within a chosen threshold are then treated as reachable. This is the method underlying the accessibility calculations, and it is distinct from any particular software used to carry it out.
 
-The routing was implemented using the R5 routing engine, accessed in R through the r5r package. R5 efficiently computes travel times over a network derived from OpenStreetMap data and is designed to handle large numbers of origin–destination pairs across walking, cycling, and other modes, which made it suitable for computing accessibility for every Census Small Area in the study.
+In this study the routing was implemented using the R5 routing engine, accessed in R through the r5r package [@pereira2021r5r; @conway2018r5]. R5 computes travel times over a network derived from OpenStreetMap data and can handle large numbers of origin–destination pairs efficiently, which made it suitable for computing walking accessibility for every Census Small Area in the study.
 
 ###  Network and input data
 
-The routing network was built from an OpenStreetMap extract for Ireland [OSM EXTRACT SOURCE/DATE]. OpenStreetMap provides the road and path geometry, including footpaths and minor links relevant to walking and cycling, that R5 uses to construct the routable network. The origins for the accessibility calculation were the Census Small Area prediction points, and the destinations were the aggregated school point locations described in the School Data section. Each destination was weighted by its total enrolment, so that a school location contributed its number of school places rather than counting as a single school. This ensured that accessibility reflected the volume of school places reachable from each area, consistent with the enrolment-weighted treatment of schools used throughout the analysis.
+The routing network was built from an OpenStreetMap extract covering Ireland and Northern Ireland, obtained from Geofabrik [@openstreetmap; @geofabrik]. OpenStreetMap provides the road and path geometry, including footpaths and minor links relevant to walking, that R5 uses to construct the routable network. The origins for the accessibility calculation were the Census Small Area prediction points (a 3 × 3 grid of points within each area, as described for the kriging measure), and the destinations were the aggregated school point locations described in the School Data section. Each destination was weighted by its total enrolment, so that a school location contributed its number of school places rather than counting as a single school. This ensured that accessibility reflected the volume of school places reachable from each area, consistent with the enrolment-weighted treatment of schools used throughout the analysis.
 
 ###  Travel-time computation and thresholds
-Travel times were computed separately for walking and for cycling, using mode-specific speeds of [will add walking speed] for walking and [will add cycling speed] for cycling. Walking accessibility was evaluated at thresholds of 10, 20, and 30 minutes, and cycling accessibility at thresholds of 5, 10, 15, and 20 minutes. These thresholds were chosen to span the range of times a child might plausibly spend travelling actively to school, from short journeys up to a realistic upper limit. For each origin and each threshold, the number of reachable school places was obtained by summing the enrolment-weighted destinations whose network travel time fell within the threshold.
 
-The 30-minute walking measure was carried forward as the primary travel-time exposure in the statistical model. Thirty minutes was treated as the most plausible upper bound for a routine walk to school, long enough to capture the realistic extent of walking journeys while remaining within the time a daily school commute on foot would reasonably take. The shorter walking thresholds and the cycling thresholds were retained for descriptive comparison but were not used as the main model exposure.
+Travel times were computed for walking, using R5's default walking speed of 3.6 km/h. Walking accessibility was evaluated at thresholds of 10, 20, and 30 minutes. These thresholds were chosen to span the range of times a child might plausibly spend walking to school, from a short journey up to a realistic upper limit. A step decay function was used, so that all school places within a given threshold were counted equally. For each origin and each threshold, the number of reachable school places was obtained by summing the enrolment-weighted destinations whose network travel time fell within the threshold.
+
+The 30-minute walking measure was carried forward as the primary travel-time exposure in the statistical model. Thirty minutes was treated as the most plausible upper bound for a routine walk to school, long enough to capture the realistic extent of walking journeys while remaining within the time a daily school commute on foot would reasonably take. The shorter 10- and 20-minute thresholds were retained for descriptive comparison but were not used as the main model exposure.
 
 
 ###Normalisation and transformation
@@ -470,11 +481,9 @@ $$
 
 where $\mathbf{z}_i$ is the set of (D - 1) ILR coordinates. These transformed coordinates are unconstrained and can therefore be included as regression covariates without the perfect collinearity that would arise from including all raw percentage components directly.
 
-Exact zero values cannot be used directly in log-ratio transformations because the logarithm of zero is undefined. Before applying the ILR transformation, exact zero percentages were therefore replaced with a small positive value of 0.001. This allowed the transformation to be computed while making only a minimal change to the original percentage values.
+Exact zero values cannot be used directly in log-ratio transformations because the logarithm of zero is undefined. Before applying the ILR transformation, exact zero percentages were therefore replaced with a small positive value of 0.001. In practice, exact zeros were uncommon and occurred mainly in the car-availability and educational-attainment compositions. This allowed the transformation to be computed while making only a minimal change to the original percentage values.
 
 The ILR transformation was implemented in R using the `compositions` package [@vandenboogaart2008compositions]. The resulting ILR-transformed demographic variables were included as covariates in the Bayesian beta regression model. This allowed the model to adjust for demographic differences between urban Census Small Areas while avoiding the collinearity problems associated with raw percentage variables. The original percentage variables were retained for descriptive summaries, but the ILR-transformed variables were used in the regression model.
-
-
 
 ## Statistical Model: Bayesian Beta Regression
 
@@ -506,6 +515,8 @@ $$
 
 where $\alpha$ is the intercept, $Z_{ij}$ represents the set of standardised demographic covariates for Census Small Area $i$, $K_i$ is the normalised kriging-based school-place density measure, and $D_i$ is the secondary spatial density measure of predicted school places per square kilometre. The demographic covariates included the ILR-transformed age composition, household car-availability composition, and educational-attainment composition, together with the additional percentage still in education covariate where included. These variables were used to adjust for differences in demographic structure across urban Census Small Areas.
 
+The same model structure was fitted twice, once for each accessibility measure. In the first model, the accessibility exposure was the kriging-based school-place density measure described above. In the second model, this was replaced by the walking accessibility measure, the log-transformed count of school places reachable on foot within 30 minutes. All demographic covariates and other model settings were kept identical between the two models, so that the kriging-based and walking-based measures could be compared on the same outcome and the same adjustment set. These are referred to as the kriging model and the walking model in the results.
+
 The terms $f_1(K_i)$ and $f_2(D_i)$ represent natural cubic spline functions. Natural cubic splines were used because the relationship between school accessibility and active travel may not be linear. For example, increases in school accessibility may be strongly associated with active travel at low levels of accessibility, but the association may become weaker or flatten at higher levels. Using splines allows the model to capture this type of non-linear relationship without assuming a single constant effect across the full range of the accessibility variables. Three degrees of freedom were used for each spline, providing a flexible but controlled curve and reducing the risk of overfitting.
 
 The normalised kriging-based accessibility variable was expressed as predicted school-place availability per 100 children aged 3–18. This variable captures school-place availability relative to local school-age population demand. The additional school-place density per square kilometre variable was included to capture the spatial concentration of predicted school places independently of the local child population denominator. Including both variables allowed the model to distinguish between relative school-place availability and broader spatial concentration of school places.
@@ -520,7 +531,13 @@ Because spline coefficients are not directly interpretable as simple one-unit ch
 
 # Results
 
-```{r active-travel-urban-rural, echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=5, out.width="100%", fig.cap="Distribution of the active-travel percentage across Census Small Areas, split by urban and rural classification. Violins show the full distribution; the white point is the median and the black point is the mean. Values are shown below the 99th percentile."}
+The outcome variable in this study is the percentage of pupils travelling to school by active modes (walking or cycling) in each Census Small Area. Figure 7 shows how this active-travel percentage is distributed, with urban and rural areas shown separately.
+
+The two distributions are clearly different. In urban areas, active travel is common and varies widely between areas: the distribution is spread out, with a mean and median both close to 38%, and many areas reaching much higher levels. In rural areas, active travel is much lower, with most areas clustered near the bottom of the scale (a median of around 5%) and only a small number of areas reaching higher values. The mean for rural areas (around 9%) is pulled up by this small tail, which is why it sits above the median.
+
+This difference is what would be expected: in rural areas, longer distances between homes and schools make walking and cycling less feasible, so most children travel by car or bus. In urban areas, schools are closer and the street network is more connected, so active travel is a realistic option for many more children. This urban–rural contrast is the main reason the statistical model was restricted to urban Census Small Areas, where active school travel is genuinely possible and the accessibility measures are most meaningful.
+
+```{r active-travel-urban-rural, echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=5, out.width="100%", fig.cap="Active-travel percentage across Census Small Areas, urban vs rural. White point = median, black point = mean. Active travel is higher and more variable in urban areas, low in most rural areas."}
 
 library(tidyverse)
 
@@ -538,14 +555,14 @@ at_summary <- at_src %>%
             median_at = median(perc_active, na.rm = TRUE), .groups = "drop")
 
 ggplot(at_src, aes(x = urban_rural, y = perc_active)) +
-  geom_violin(fill = "grey85", colour = "grey50", trim = TRUE) +
+  geom_violin(fill = "lightblue", colour = "lightblue", trim = TRUE) +
   geom_point(data = at_summary, aes(y = median_at),
              colour = "white", size = 3, shape = 21, fill = "white", stroke = 0.8) +
   geom_point(data = at_summary, aes(y = mean_at),
              colour = "black", size = 2.5) +
   coord_flip() +
   labs(
-    title = "Fig. 7. Active travel to school, urban vs rural",
+    title = "Active travel to school, urban vs rural",
     subtitle = "White point = median, black point = mean; below 99th percentile",
     x = NULL,
     y = "Active travel (% of pupils walking or cycling)"
@@ -604,7 +621,7 @@ ggplot() +
     alpha = 0.75
   ) +
   labs(
-    title = "Fig. 8. Spatial distribution of schools in Ireland",
+    title = "Spatial distribution of schools in Ireland",
     subtitle = "Mainstream schools, 2024/25",
     colour = "School level"
   ) +
@@ -620,9 +637,10 @@ The map shows that schools are distributed across the country, with visible clus
 ### Walking Accessibility   
 
 This section describes the walking accessibility measure across Census Small Areas (CSAs). The measure counts how many school places can be reached on foot within 30 minutes from each CSA, expressed per 100 children aged 3–18. It is based on routing-based travel time, which uses the real road and path network rather than straight-line distance, so it reflects the routes a child would actually use and captures the effect of any barriers in the network.
-Figure X maps the walking accessibility measure, with its distribution shown alongside. The island of Ireland boundary is drawn beneath the map for geographical context. The values are strongly right-skewed: a small number of dense urban CSAs can reach many thousands of school places, while most CSAs reach far fewer. The median walking accessibility is about 920 places per 100 children, but the highest values reach into the tens of thousands. Because of this skew, the map colour scale uses a square-root transformation so that differences at the lower end of the distribution remain visible, which a linear scale would hide. The map shows that walking accessibility is highest in and around the larger urban areas, where schools and street networks are dense, and decreases towards the edges of towns and along the coast. Some CSAs on peninsulas, islands, and estuary edges have very low or zero walking accessibility even though schools are not far away in straight-line distance. This pattern is important for the comparison that follows, because it suggests that barriers in the network, rather than distance alone, affect how reachable schools really are. The distribution shown beside the map confirms the strong right skew, including a group of CSAs at or near zero walking accessibility.
 
-```{r walking-map-and-distribution, echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=7, out.width="100%", fig.cap="Walking accessibility across Census Small Areas (left) and its distribution (right). School places reachable on foot within 30 minutes per 100 children aged 3-18. Census Small Areas with fewer than five children aged 3-18 are excluded. The map colour scale is capped at the 95th percentile on a square-root scale so differences at the lower end are visible; the distribution shows the full range on a square-root axis."}
+Figure 9 maps the walking accessibility measure, with its distribution shown alongside. The island of Ireland boundary is drawn beneath the map for geographical context. The values are strongly right-skewed: a small number of dense urban CSAs can reach many thousands of school places, while most CSAs reach far fewer. The median walking accessibility is about 920 places per 100 children, but the highest values reach into the tens of thousands. Because of this skew, the map colour scale uses a square-root transformation so that differences at the lower end of the distribution remain visible, which a linear scale would hide. The map shows that walking accessibility is highest in and around the larger urban areas, where schools and street networks are dense, and decreases towards the edges of towns and along the coast. Some CSAs on peninsulas, islands, and estuary edges have very low or zero walking accessibility even though schools are not far away in straight-line distance. This pattern is important for the comparison that follows, because it suggests that barriers in the network, rather than distance alone, affect how reachable schools really are. The distribution shown beside the map confirms the strong right skew, including a group of CSAs at or near zero walking accessibility.
+
+```{r walking-map-and-distribution, echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=7, out.width="100%", fig.cap="Walking accessibility across Census Small Areas (left) and its distribution (right): school places reachable on foot within 30 minutes per 100 children aged 3-18. Colour scale is square-root transformed so lower values stay visible."}
 
 library(tidyverse)
 library(sf)
@@ -655,14 +673,14 @@ p_map <- ggplot() +
   geom_sf(data = ireland_boundary, fill = NA, colour = "grey40", linewidth = 0.15) +
   scale_fill_viridis_c(name = "Walking access\nper 100 children",
                        trans = "sqrt", labels = label_number(big.mark = ",")) +
-  labs(title = "Fig. 9. Walking accessibility to school places") +
+  labs(title = "Walking accessibility to school places") +
   theme_minimal() + theme(plot.title = element_text(face = "bold"))
 
 p_hist <- walk_map_sf %>%
   st_drop_geometry() %>%
   filter(is.finite(access_walk_per_100)) %>%
   ggplot(aes(x = access_walk_per_100)) +
-  geom_histogram(bins = 40) +
+  geom_histogram(bins = 40, fill = "lightblue", colour = "white") +
   scale_x_sqrt(labels = label_number(big.mark = ",")) +
   labs(title = "Distribution", x = "Walking access per 100 children",
        y = "Number of Census Small Areas") +
@@ -672,12 +690,13 @@ p_map + p_hist
 ```
 ### How the Two Measures Compare                  
 
-Having described each accessibility measure separately, this section compares them directly. The comparison is restricted to urban CSAs, matching the scope of the later statistical model. Figure X plots the kriged school-place density against the walking accessibility measure, with both expressed per 100 children aged 3–18 and shown on logarithmic scales. Each point is coloured by the difference in rank between the two measures, so that areas ranked similarly by both measures appear pale, while areas ranked very differently appear strongly coloured.
+Having described each accessibility measure separately, this section compares them directly. The comparison is restricted to urban CSAs, matching the scope of the later statistical model. Figure 10 plots the kriged school-place density against the walking accessibility measure, with both expressed per 100 children aged 3–18 and shown on logarithmic scales. Each point is coloured by the difference in rank between the two measures, so that areas ranked similarly by both measures appear pale, while areas ranked very differently appear strongly coloured.
+
 Overall, the two measures are positively related: CSAs with higher kriged density tend also to have higher walking accessibility, and the cloud of points slopes upward. However, the relationship is loose rather than tight, and there is a clear spread of CSAs that the two measures rank differently. A band of CSAs sits along the bottom of the plot at zero walking accessibility despite having moderate or high kriged density. These are areas where schools appear close in straight-line terms but cannot be reached on foot within 30 minutes.
 
-Figure X summarises this disagreement using the difference in rank between the two measures. The distribution is broadly symmetric and centred near zero, which confirms that neither measure systematically ranks areas higher than the other. At the same time, the spread on either side of zero shows that the two measures often disagree for individual CSAs. In other words, the kriging and walking measures agree on average but diverge in specific places. The next section examines these divergent areas in more detail, since they point to a consistent explanation.
+Figure 11 summarises this disagreement using the difference in rank between the two measures. The distribution is broadly symmetric and centred near zero, which confirms that neither measure systematically ranks areas higher than the other. At the same time, the spread on either side of zero shows that the two measures often disagree for individual CSAs. In other words, the kriging and walking measures agree on average but diverge in specific places. The next section examines these divergent areas in more detail, since they point to a consistent explanation.
 
-```{r kriging-vs-walking-scatter, echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=6, out.width="100%", fig.cap="Kriged school-place density against walking accessibility for urban Census Small Areas, both per 100 children aged 3-18 and on log scales. Points are coloured by the difference in rank between the two measures. The dashed line is a line of equality shown for reference; because the two measures are on different scales, it is a visual guide rather than a direct comparison."}
+```{r kriging-vs-walking-scatter, echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=6, out.width="100%", fig.cap="Kriged school-place density against walking accessibility for urban Census Small Areas, both per 100 children on log scales. Points are coloured by rank difference between the two measures; the dashed line marks equality."}
 
 library(tidyverse)
 library(sf)
@@ -715,27 +734,27 @@ ggplot(compare_df,
                          low = "#2166AC", mid = "grey85", high = "#B2182B", midpoint = 0) +
   labs(x = "Kriged school-place density (per 100 children, log scale)",
        y = "Walking accessibility (per 100 children, log scale)",
-       title = "Fig. 10. Kriging vs walking accessibility, urban Census Small Areas") +
+       title = "Kriging vs walking accessibility, urban Census Small Areas") +
   theme_minimal() + theme(plot.title = element_text(face = "bold"))
 ```
 
-```{r rank-difference-histogram, echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=5, out.width="100%", fig.cap="Distribution of the difference in rank between the kriging and walking accessibility measures across urban Census Small Areas. Zero (dashed line) means the two measures rank an area equally. Positive values mean kriging ranks an area higher than walking does; negative values the reverse."}
+```{r rank-difference-histogram, echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=5, out.width="100%", fig.cap="Distribution of the rank difference between the kriging and walking measures across urban Census Small Areas. Zero (dashed line) means the two measures rank an area equally; positive values mean kriging ranks it higher than walking."}
 
 ggplot(compare_df, aes(x = rank_diff)) +
   geom_histogram(bins = 40, fill = "grey40", colour = "white") +
   geom_vline(xintercept = 0, linetype = "dashed", colour = "black") +
   labs(x = "Rank difference (kriging rank - walking rank)",
        y = "Number of Census Small Areas",
-       title = "Fig. 11. Distribution of the rank difference between the two measures") +
+       title = "Distribution of the rank difference between the two measures") +
   theme_minimal() + theme(plot.title = element_text(face = "bold"))
 ```
 
 ### Where the Measures Diverge: Severance                    
 
 The comparison in the previous section showed that the kriging and walking measures agree on average but disagree for individual CSAs. This section looks more closely at the areas where they diverge most. The most informative of these are CSAs where the kriged density is moderate or high, suggesting schools are nearby in straight-line terms, but the walking accessibility is zero, meaning no school places can actually be reached on foot within 30 minutes. This pattern is consistent with severance: physical barriers such as motorways, rivers, and stretches of water that cut an area off from schools that are close by but not reachable on foot.
-Figure X highlights these CSAs. Across the urban CSAs, a group of areas with above-median kriged density also have zero walking accessibility, and they are circled in the plot. Table X lists the strongest of these cases, ordered by kriged density. In each of these CSAs, the kriging measure ranks the area as having good school-place availability, while the walking measure ranks it among the lowest, because the network distance to any school exceeds a 30-minute walk.
 
-```{r severance-scatter, echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=6, out.width="100%", fig.cap="Urban Census Small Areas where walking accessibility is zero but kriged density is above the median are circled. Schools are close in straight-line terms but cannot be reached on foot in 30 minutes. Zero-walk areas are plotted at one for the log axis; the dotted line marks walking accessibility of zero."}
+Figure 12 highlights these CSAs. Across the urban CSAs, a group of areas with above-median kriged density also have zero walking accessibility, and they are circled in the plot. Table 1 lists the strongest of these cases, ordered by kriged density. In each of these CSAs, the kriging measure ranks the area as having good school-place availability, while the walking measure ranks it among the lowest, because the network distance to any school exceeds a 30-minute walk.
+```{r severance-scatter, echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=6, out.width="100%", fig.cap="Urban Census Small Areas with zero walking accessibility but above-median kriged density are circled: schools are close in straight-line terms but not reachable on foot in 30 minutes. Zero-walk areas are plotted at one for the log axis."}
 
 library(tidyverse)
 library(scales)
@@ -761,7 +780,7 @@ ggplot(plot_df, aes(x = krig_value_per_100_3_18, y = walk_plot)) +
                          low = "#2166AC", mid = "grey85", high = "#B2182B", midpoint = 0) +
   labs(x = "Kriged school-place density (per 100 children, log scale)",
        y = "Walking accessibility (per 100 children, log scale)",
-       title = "Fig. 12. Schools nearby but none walkable: zero-walk areas circled") +
+       title = "Schools nearby but none walkable: zero-walk areas circled") +
   theme_minimal() + theme(plot.title = element_text(face = "bold"))
 ```
 
@@ -778,11 +797,11 @@ severance %>%
     `Kriging rank` = round(rank_krig, 0),
     `Walking rank` = round(rank_walk, 0)
   ) %>%
-  kable(caption = "Table. 1. The fifteen urban Census Small Areas with the highest kriged school-place density but zero walking accessibility.")
+  kable(caption = "The fifteen urban Census Small Areas with the highest kriged school-place density but zero walking accessibility.")
 
 ```
 
-```{r jacobs-island-severance, echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=6, out.width="100%", fig.cap="Severance near Cork. Left: Jacob's Island in the wider Cork area, with schools (yellow) scattered across the city. Right: the highlighted Census Small Area (047132051) on Jacob's Island, separated from nearby schools by the Mahon estuary and the South Ring Road, so it cannot be reached on foot in 30 minutes despite schools being close in straight-line distance."}
+```{r jacobs-island-severance, echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=6, out.width="100%", fig.cap="Severance near Cork. Left: Jacob's Island in the wider Cork area, with schools in yellow. Right: the highlighted Census Small Area (047132051), cut off from nearby schools by the Mahon estuary and the South Ring Road, so none can be reached on foot in 30 minutes."}
 
 library(png)
 library(grid)
@@ -793,21 +812,18 @@ img2 <- rasterGrob(readPNG("D:/Final-Project/images/JB3.png"), interpolate = TRU
 
 (wrap_elements(img1) + wrap_elements(img2)) +
   plot_annotation(
-    title = "Fig. 13. Severance in action: Jacob's Island, Cork",
+    title = "Severance in action: Jacob's Island, Cork",
     theme = theme(plot.title = element_text(face = "bold", size = 14, hjust = 0.5))
   )
 
 
 ```
-A clear example is the CSA on Jacob's Island in Cork, shown in Figure X. The wider view on the left shows that schools (in yellow) are present throughout the Cork area, including several within a short straight-line distance of Jacob's Island. The zoomed view on the right shows the CSA itself, which sits on a spit of land surrounded by the Mahon estuary and cut off from the city by the South Ring Road. Although schools are close as the crow flies, the only routes available involve long detours by road, so no school can be reached on foot within 30 minutes and the walking accessibility for this area is zero. The kriging measure, which is based on straight-line distance, does not capture this barrier and therefore records the area as having reasonable school-place availability.
-The same broad pattern can be seen at the national scale in the walking accessibility map (Figure X), where the lowest-accessibility CSAs cluster along the coast, on peninsulas, and around estuaries. This suggests that severance is a recurring feature rather than an isolated case, and that straight-line measures of school-place availability can overstate how reachable schools actually are in areas affected by physical barriers. It should be noted that this is a consistent pattern identified by comparing the two measures, rather than a formally tested effect, but the geography of the divergent areas points clearly towards severance as the explanation.
+A clear example is the CSA on Jacob's Island in Cork, shown in Figure 13. The wider view on the left shows that schools (in yellow) are present throughout the Cork area, including several within a short straight-line distance of Jacob's Island. The zoomed view on the right shows the CSA itself, which sits on a spit of land surrounded by the Mahon estuary and cut off from the city by the South Ring Road. Although schools are close as the crow flies, the only routes available involve long detours by road, so no school can be reached on foot within 30 minutes and the walking accessibility for this area is zero. The kriging measure, which is based on straight-line distance, does not capture this barrier and therefore records the area as having reasonable school-place availability.
 
+The same broad pattern can be seen at the national scale in the walking accessibility map (Figure 9), where the lowest-accessibility CSAs cluster along the coast, on peninsulas, and around estuaries. This suggests that severance is a recurring feature rather than an isolated case, and that straight-line measures of school-place availability can overstate how reachable schools actually are in areas affected by physical barriers. It should be noted that this is a consistent pattern identified by comparing the two measures, rather than a formally tested effect, but the geography of the divergent areas points clearly towards severance as the explanation.
 
-Bivariate map: CSAs coloured by both measures (if possible if there is time)
+```{r bivariate-map, echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=9, out.width="100%", fig.cap="Bivariate map shading each Census Small Area by both kriged density and walking accessibility at once. Areas high in both (dark) cluster in the cities; areas with high density but low walking access (red) cluster along the coast and estuaries, showing severance at national scale."}
 
-{r bivariate-map, echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=9, out.width="100%", fig.cap="Bivariate map of the two accessibility measures across urban Census Small Areas. Each area is shaded by both kriged school-place density and walking accessibility at once. Areas high in both appear dark; areas where the two measures disagree (for example high kriged density but low walking accessibility, indicating severance) appear in the off-diagonal colours."}
-
-```{r}
 library(tidyverse)
 library(sf)
 library(biscale)
@@ -837,7 +853,7 @@ map <- ggplot() +
   geom_sf(data = ireland_boundary, fill = "grey97", colour = "grey70", linewidth = 0.2) +
   geom_sf(data = bi_sf, aes(fill = bi_class), colour = NA, show.legend = FALSE) +
   bi_scale_fill(pal = "GrPink", dim = 3) +
-  labs(title = "Fig. 14. Two accessibility measures at once",
+  labs(title = "Two accessibility measures at once",
        subtitle = "Kriged density and walking accessibility, Census Small Areas") +
   bi_theme() +
   theme(plot.title = element_text(face = "bold", size = 13),
@@ -853,13 +869,20 @@ ggdraw() +
   draw_plot(legend, 0.02, 0.02, 0.22, 0.22)
 ```
 
-### Model Results — Urban Areas                            
+The bivariate map in Figure 14 shows both accessibility measures together across the whole country. Each Census Small Area is shaded by its kriged school-place density and its walking accessibility at once, using the colour grid shown in the corner. Areas scoring high on both measures appear dark and are concentrated in the cities — Dublin, Cork, Galway, and Limerick stand out as dark clusters where schools are both densely distributed and easy to reach on foot. Areas scoring high on kriged density but low on walking accessibility appear in the red tones; these are the severance areas, where schools are close in straight-line terms but not reachable on foot.
 
-This section reports the fitted Bayesian beta regression models for urban CSAs. Two models were fitted: one using the kriged school-place density measure and one using the walking accessibility measure, each adjusted for the same set of demographic covariates. Before interpreting the estimated effects, the models were checked for convergence and fit.
-Table X reports the convergence diagnostics for both models. In both cases the maximum Rhat value is very close to one (1.002 for the kriging model and 1.001 for the walking model), the effective sample sizes are in the thousands, and there were no divergent transitions. Together these indicate that the Markov chains mixed well and that the posterior estimates are reliable. Figure X shows posterior predictive checks for both models. In each panel, the observed distribution of the active-travel proportion (the dark line) sits within the spread of the simulated distributions drawn from the fitted model (the lighter lines), which indicates that both models reproduce the observed pattern of active travel reasonably well.
-Figure X shows the estimated coefficients for both models, with their 95% credible intervals. The demographic covariates are shown on the ILR-transformed and standardised scale, so their coefficients are not directly interpretable as simple percentage changes, but the plot shows which covariates are more clearly associated with active travel. The clearest difference between the two models is in the accessibility spline terms. In the walking model, the spline terms for walking accessibility have credible intervals clearly separated from zero, indicating a strong association with active travel. In the kriging model, the corresponding terms sit closer to zero with wider intervals, indicating a weaker and less certain association. Because the accessibility effects are modelled with splines and are easier to read on the response scale, they are presented as marginal-effect curves in the next section. Table X provides summary statistics for the main variables used in the model.
+The red severance areas are most common around the coast, on peninsulas, and in areas broken up by water, including stretches of the west and south-west coast and the Donegal coastline. This matches the pattern seen in the walking accessibility map, and supports the interpretation that severance is driven by physical geography: where the land is divided by estuaries, rivers, or the sea, straight-line proximity to schools does not translate into walkable access. Seen at national scale, the divergence between the two measures is a consistent, geographically patterned feature rather than a handful of isolated cases.
+
+### Model Results — Urban Areas                            
+Two Bayesian beta regression models were fitted for urban CSAs: one using the kriged school-place density measure and one using the walking accessibility measure, each adjusted for the same set of demographic covariates. Before interpreting the estimated effects, the models were checked for convergence and fit.
+
+Figure 15 shows the estimated coefficients for both models, with their 95% credible intervals. The demographic covariates are shown on the ILR-transformed and standardised scale, so their coefficients are not directly interpretable as simple percentage changes, but the plot shows which covariates are more clearly associated with active travel. The clearest difference between the two models is in the accessibility spline terms. In the walking model, the spline terms for walking accessibility have credible intervals clearly separated from zero, indicating a strong association with active travel. In the kriging model, the corresponding terms sit closer to zero with wider intervals, indicating a weaker and less certain association.
+
+Figure 16 shows posterior predictive checks for both models. In each panel, the observed distribution of the active-travel proportion (the dark line) sits within the spread of the simulated distributions drawn from the fitted model (the lighter lines), which indicates that both models reproduce the observed pattern of active travel reasonably well.
+
+Table 2 reports the convergence diagnostics for both models. In both cases the maximum Rhat value is very close to one (1.002 for the kriging model and 1.001 for the walking model), the effective sample sizes are in the thousands, and there were no divergent transitions. Together these indicate that the Markov chains mixed well and that the posterior estimates are reliable. Table 3 provides summary statistics for the main variables used in the model. Because the accessibility effects are modelled with splines and are easier to read on the response scale, they are presented as marginal-effect curves in the next section.
             
-```{r coefficient-plots-both, echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=7, out.width="100%", fig.cap="Posterior estimates (means and 95 percent credible intervals) for the regression coefficients in the kriging model (left) and the walking accessibility model (right). Demographic covariates are on the ILR-transformed, standardised scale. Intervals that do not cross zero indicate covariates more clearly associated with active travel."}
+```{r coefficient-plots-both, echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=7, out.width="100%", fig.cap="Posterior coefficient estimates (means and 95% credible intervals) for the kriging model (left) and walking model (right). Intervals that do not cross zero indicate covariates more clearly associated with active travel."}
 
 library(brms)
 library(tidyverse)
@@ -869,7 +892,7 @@ model_urban_krig <- readRDS("D:/Final-Project/model/models/model_urban_krig_spli
 model_urban_walk <- readRDS("D:/Final-Project/model/models/model_urban_walk.rds")
 
 p_krig <- mcmc_plot(model_urban_krig, type = "intervals", prob = 0.95) +
-  labs(title = "Fig. 15. Kriging model") +
+  labs(title = "Kriging model") +
   theme_minimal() + theme(plot.title = element_text(face = "bold"))
 
 p_walk <- mcmc_plot(model_urban_walk, type = "intervals", prob = 0.95) +
@@ -879,12 +902,12 @@ p_walk <- mcmc_plot(model_urban_walk, type = "intervals", prob = 0.95) +
 p_krig + p_walk
 ```
 
-```{r posterior-predictive-both, echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=5, out.width="100%", fig.cap="Posterior predictive checks for the kriging model (left) and the walking model (right). The dark line is the observed distribution of the active-travel proportion; lighter lines are draws simulated from the fitted model. Close agreement indicates each model reproduces the observed distribution well."}
+```{r posterior-predictive-both, echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=5, out.width="100%", fig.cap="Posterior predictive checks for the kriging model (left) and walking model (right). The dark line is the observed active-travel distribution; lighter lines are draws from the fitted model. Close agreement indicates a good fit."}
 
 library(patchwork)
 
 p_pp_krig <- pp_check(model_urban_krig, ndraws = 100) +
-  labs(title = "Fig. 16. Kriging model") +
+  labs(title = "Kriging model") +
   theme_minimal() + theme(plot.title = element_text(face = "bold"))
 
 p_pp_walk <- pp_check(model_urban_walk, ndraws = 100) +
@@ -919,14 +942,13 @@ bind_rows(
   conv_row(model_urban_krig, "Kriging"),
   conv_row(model_urban_walk, "Walking")
 ) %>%
-  kable(caption = "Table. 2. Convergence diagnostics for both models. Rhat values near 1, large effective sample sizes (ESS), and no divergent transitions indicate the chains converged well.")
+  kable(caption = "Convergence diagnostics for both models. Rhat values near 1, large effective sample sizes (ESS), and no divergent transitions indicate the chains converged well.")
 ```
 
 ```{r summary-statistics-table, echo=FALSE, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(knitr)
 
-# load the modelling dataset
 df_model <- readRDS("D:/Final-Project/model/data2/df_urban_model.rds")
 
 # pick the key model variables (response + accessibility + a few covariates)
@@ -951,17 +973,19 @@ summary_vars %>%
     Max    = round(max(value, na.rm = TRUE), 1),
     .groups = "drop"
   ) %>%
-  kable(caption = "Table. 3. Summary statistics for the main variables used in the urban modelling dataset. Values are shown for the Census Small Areas included in the model after filtering.")
+  kable(caption = "Summary statistics for the main variables used in the urban modelling dataset. Values are shown for the Census Small Areas included in the model after filtering.")
 ```
 
 ### Effect of Accessibility on Active Travel
 
-This section shows how the predicted percentage of active travel changes across the range of each accessibility measure, with all other covariates held at their average. Because the spline coefficients are not directly interpretable, these marginal-effect curves give a clearer picture of each measure's effect on the response scale. Figure X shows the two curves. The two measures entered their models on different scales (the kriging measure on its original scale and the walking measure on a log10 scale), so the curves should be read individually rather than compared by their position on the horizontal axis. They can, however, be compared on the vertical axis, since both predict the same outcome.
+The marginal-effect curves show how the predicted percentage of active travel changes across the range of each accessibility measure, with all other covariates held at their average. Because the spline coefficients are not directly interpretable, these curves give a clearer picture of each measure's effect on the response scale. Figure 17 shows the two curves. The two measures entered their models on different scales (the kriging measure on its original scale and the walking measure on a log10 scale), so the curves should be read individually rather than compared by their position on the horizontal axis. They can, however, be compared on the vertical axis, since both predict the same outcome.
 The kriging curve (left) is gentle and slightly non-monotonic. Predicted active travel changes only modestly across the range of kriged density, moving within a band of roughly 41% to 44%, and the credible interval is wide. This indicates that kriged school-place density has only a small and uncertain association with active travel once demographic differences are accounted for.
+
 The walking curve (right) is much steeper and has a clear S-shape. Predicted active travel rises from around 15% at the lowest levels of walking accessibility to around 60% at the highest, and the credible interval is narrow throughout. This indicates a strong and fairly certain association: areas where more school places can actually be reached on foot have substantially higher active travel.
+
 Comparing the two curves on the vertical axis, the walking measure is associated with a much larger change in active travel than the kriging measure, and with greater certainty. This is consistent with the severance pattern described earlier: what matters for active travel is not simply how close schools are in straight-line terms, but whether they can actually be reached on foot. The walking measure captures this directly, which may explain why it is more strongly associated with active travel than the straight-line kriging measure.
 
-```{r marginal-effects-both, echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=6, out.width="100%", fig.cap="Marginal effect of each accessibility measure on the predicted active-travel percentage, with other covariates held at their average. Left: kriged school-place density on its original scale. Right: walking accessibility on a log10 scale, the scale on which it entered the model. Because the two measures enter the models on different scales, the curves should be read individually rather than compared directly by eye."}
+```{r marginal-effects-both, echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=6, out.width="100%", fig.cap="Marginal effect of each accessibility measure on predicted active-travel percentage, with other covariates held at their average. Left: kriged density (original scale). Right: walking accessibility (log10 scale). The curves should be read individually, not compared by horizontal position."}
 
 library(brms); library(tidyverse); library(patchwork); library(splines)
 
@@ -997,7 +1021,7 @@ plot_walk <- bind_cols(ndw, as_tibble(pw)) %>%
 # kriging on its own (linear) scale
 p_krig <- ggplot(plot_krig, aes(krig_value_per_100_3_18, Estimate)) +
   geom_ribbon(aes(ymin=Q2.5, ymax=Q97.5), alpha=.2) + geom_line(linewidth=1) +
-  labs(title="Fig. 17. Kriging accessibility effect",
+  labs(title="Kriging accessibility effect",
        x="Kriged school-place density (per 100 children)",
        y="Predicted active travel (%)") +
   theme_minimal() + theme(plot.title=element_text(face="bold"))
@@ -1018,30 +1042,34 @@ p_krig + p_walk
 # Discussion
 
 ## Interpretation of Results
+
 The central finding of this study is that how schools are reached matters more than how close they are in straight-line terms. The two accessibility measures agreed on average but diverged in many individual CSAs, and the areas where they diverged most pointed consistently to severance, where physical barriers such as motorways, rivers, and water separate an area from schools that are nearby as the crow flies. The Jacob's Island example in Cork illustrates this clearly: schools are close in straight-line distance, but the estuary and the surrounding road network mean none can be reached within a 30-minute walk.
+
 This interpretation is supported by the statistical model. The walking accessibility measure, which is based on actual network travel time, had a strong and fairly certain association with active travel, while the kriged density measure, which is based on straight-line distance, had only a small and uncertain association. Taken together, the comparison and the model suggest that straight-line measures of school-place availability can overstate how reachable schools really are, and that network-based measures capture the practical opportunity for active travel more faithfully.
-These findings connect back to the "postcode lottery" idea that motivated the study. They suggest that unequal opportunities for active school travel are not only about where schools are located, but also about whether the local network allows children to reach them on foot. Two areas with similar straight-line access to schools can have very different walking opportunities if one is cut off by a barrier. This points to the importance of local infrastructure, such as pedestrian crossings and routes across or around barriers, in supporting active school travel, alongside the broader distribution of school places.
+These findings connect back to the "postcode lottery" idea that motivated the study. They suggest that unequal opportunities for active school travel are not only about where schools are located, but also about whether the local network allows children to reach them on foot. Two areas with similar straight-line access to schools can have very different walking opportunities if one is cut off by a barrier. This points to the potential importance of local infrastructure, such as pedestrian crossings and routes across or around barriers, as well as the broader distribution of school places, in shaping opportunities for active school travel.
 
 ## Limitations
 
-This study has several limitations. First, the outcome data are restricted by the way school travel information is released in official statistics. The Census data provide aggregated travel-to-education counts for Census Small Areas, rather than individual-level journeys between home and school. As a result, the analysis cannot observe the actual school attended by each pupil, the exact route taken, or whether pupils travel to primary or post-primary schools. The model therefore estimates area-level associations between school accessibility and active travel, rather than individual travel behaviour. This means that the results should be interpreted as evidence of spatial association, not as proof that improved accessibility directly causes higher walking or cycling rates.
+A number of limitations should be kept in mind when interpreting these results. The outcome data are restricted by the way school travel information is released in official statistics. The Census data provide aggregated travel-to-education counts for Census Small Areas, rather than individual-level journeys between home and school. As a result, the analysis cannot observe the actual school attended by each pupil, the exact route taken, or whether pupils travel to primary or post-primary schools. The model therefore estimates area-level associations between school accessibility and active travel, rather than individual travel behaviour, and the results should be interpreted as evidence of spatial association, not as proof that improved accessibility directly causes higher walking or cycling rates.
 
-Second, the analysis combines school accessibility measures with an outcome that is not fully separated by school type in the main Small Area-level data. Primary and post-primary pupils may have different travel distances, school-choice patterns, and active travel opportunities. For example, younger children may be more dependent on nearby primary schools, while secondary students may travel further because post-primary schools are fewer and more specialised. Future work should therefore repeat the analysis separately for primary and post-primary schools where the data allow. However, this may be limited by the availability of travel-mode outcomes disaggregated by school type at fine spatial scales.
+The active-travel outcome is also not separated by school type. Primary and post-primary pupils may have different travel distances and school-choice patterns: younger children may depend on nearby primary schools, while older students may travel further to fewer, more specialised post-primary schools. Because the Census outcome combines both groups, the analysis cannot distinguish these patterns. Future work could repeat the analysis separately for primary and post-primary schools where the data allow, although this may be limited by the availability of travel-mode outcomes disaggregated by school type at fine spatial scales.
 
-Third, the school accessibility measures use enrolment as a proxy for school places. Enrolment provides a consistent measure of the relative size and spatial distribution of schools, but it does not measure spare capacity, catchment areas, admissions policies, or whether a place is realistically available to a child living in a particular area. This limitation is especially relevant where schools are oversubscribed or where school choice is shaped by factors other than distance.
+The school accessibility measures use enrolment as a proxy for school places. Enrolment provides a consistent measure of the relative size and spatial distribution of schools, but it does not measure spare capacity, catchment areas, admissions policies, or whether a place is realistically available to a child living in a particular area. This limitation is especially relevant where schools are oversubscribed or where school choice is shaped by factors other than distance.
 
-Fourth, the kriging-based accessibility measure captures the spatial distribution of school places, but it does not account for barriers in the transport network, route safety, traffic conditions, or the quality of walking and cycling infrastructure. The routing-based travel-time measure addresses this limitation more directly by using the road and path network, but it still depends on assumptions about walking and cycling speeds and on the completeness and accuracy of OpenStreetMap data.
-
+The kriging-based accessibility measure captures the spatial distribution of school places, but it does not account for barriers in the transport network, route safety, traffic conditions, or the quality of walking infrastructure. The routing-based travel-time measure addresses this limitation more directly by using the road and path network, but it still depends on the assumed walking speed and on the completeness and accuracy of OpenStreetMap data.
 Finally, the workflow could be repeated using settlement-level data as a complementary analysis. Settlement-level travel tables can describe travel behaviour for whole towns or urban areas, rather than only Census Small Areas. This may provide a broader view of how school provision and active travel relate at the town scale, and could be useful for comparing with previous work on Irish settlements. However, settlement-level data are less spatially detailed than Census Small Area data, so they would be better suited as a complementary robustness or contextual analysis rather than a replacement for the main local-scale model.
 
 
-## Comparison with the article
+## Comparison with Previous Work
 
-This study was motivated by Mancini's work on adolescent active transport in Ireland, which argued that differences in active travel between areas are linked to the geography of school provision rather than simply to population size [@mancini2025census; @mancini2024rte]. The findings here are broadly consistent with that argument, but they add a spatial dimension to it. Where Mancini focused on the presence and type of school provision, this study shows that even where school provision appears adequate in straight-line terms, active travel can still be limited if schools are not reachable on foot through the local network.
-In this sense, the present study complements rather than contradicts the earlier work. It supports the idea that active school travel is shaped by the geography of provision, while highlighting that the connectivity of the network is an additional and important part of that geography. The "postcode lottery" of active travel may therefore depend not only on whether school places exist nearby, but on whether the surrounding network allows children to walk to them. A practical difference is that this study worked at the finer Census Small Area scale rather than the settlement level, which made it possible to detect the local severance effects that a coarser analysis would miss.
+The motivation for this work came from Mancini's research on adolescent active transport in Ireland, which argued that differences in active travel between areas are linked to the geography of school provision rather than simply to population size [@mancini2025census; @mancini2024rte]. The findings here are broadly consistent with that argument, but they add a spatial dimension to it. Where Mancini focused on the presence and type of school provision, the results presented here show that even where provision appears adequate in straight-line terms, active travel can still be limited if schools are not reachable on foot through the local network.
+
+In this sense, the present analysis complements rather than contradicts the earlier work. It supports the idea that active school travel is shaped by the geography of provision, while highlighting that the connectivity of the network is an additional and important part of that geography. The "postcode lottery" of active travel may therefore depend not only on whether school places exist nearby, but on whether the surrounding network allows children to walk to them. Working at the finer Census Small Area scale, rather than the settlement level, made it possible to detect the local severance effects that a coarser analysis would miss.
 
 # Conclusions
 
-This study examined whether school-place accessibility is associated with active school travel across Ireland, using two complementary measures: a kriging-based measure of school-place density based on straight-line distance, and a walking accessibility measure based on actual network travel time. By comparing the two measures across Census Small Areas and modelling their association with active travel, the study aimed to test the idea that opportunities for walking and cycling to school may depend on where children live.
+The aim of this work was to examine whether school-place accessibility is associated with active school travel across Ireland, using two complementary measures: a kriging-based measure of school-place density based on straight-line distance, and a walking accessibility measure based on actual network travel time. By comparing the two measures across Census Small Areas and modelling their association with active travel, the analysis tested the idea that opportunities for walking and cycling to school may depend on where children live.
+
 The two measures agreed on average but diverged in many individual areas. These divergences consistently reflected severance, where barriers such as motorways, rivers, and water cut an area off from schools that are nearby in straight-line terms, as illustrated by the Jacob's Island example in Cork. The statistical model reinforced this picture: the walking accessibility measure had a strong and fairly certain association with active travel, while the straight-line kriging measure had only a small and uncertain association.
+
 Taken together, these results suggest that what matters most for active school travel is not how close schools are in straight-line terms, but whether they can actually be reached on foot. This has practical implications for how school accessibility is measured and for how active travel is supported: network-based measures capture the real opportunity for walking more faithfully than straight-line measures, and local infrastructure that overcomes barriers may be as important as the broader distribution of school places. Future work could extend the analysis by separating primary and post-primary schools, by including cycling accessibility computed with the same network method, and by linking these measures to local infrastructure data to identify where targeted improvements would most improve active school travel.
